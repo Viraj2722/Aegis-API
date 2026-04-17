@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRef } from "react";
 import { motion } from "framer-motion";
 import { RefreshCw, Upload, Database } from "lucide-react";
+import { useRouter } from "next/navigation";
 import ProtectedRoute from "../../components/auth/ProtectedRoute";
 import Navbar from "../../components/dashboard/Navbar";
 import StatCards from "../../components/dashboard/StatCards";
@@ -21,6 +22,23 @@ const isDemo = () =>
   typeof window !== "undefined"
     ? localStorage.getItem("aegis_token") === DEMO_TOKEN
     : false;
+
+const DEMO_LOGS = [
+  { api: "/api/auth/login", method: "POST", response_code: 200, response_time: 280, payload_size: 1240, timestamp: "2026-04-15T10:11:00Z" },
+  { api: "/api/auth/login", method: "POST", response_code: 401, response_time: 390, payload_size: 1320, timestamp: "2026-04-15T10:14:00Z" },
+  { api: "/api/auth/login", method: "POST", response_code: 200, response_time: 260, payload_size: 1210, timestamp: "2026-04-15T10:18:00Z" },
+  { api: "/api/users", method: "GET", response_code: 200, response_time: 180, payload_size: 3400, timestamp: "2026-04-16T08:02:00Z" },
+  { api: "/api/users", method: "GET", response_code: 500, response_time: 920, payload_size: 3600, timestamp: "2026-04-16T08:05:00Z" },
+  { api: "/api/users", method: "GET", response_code: 200, response_time: 210, payload_size: 3450, timestamp: "2026-04-16T08:07:00Z" },
+  { api: "/api/payments/charge", method: "POST", response_code: 200, response_time: 560, payload_size: 980, timestamp: "2026-04-16T12:11:00Z" },
+  { api: "/api/payments/charge", method: "POST", response_code: 502, response_time: 1300, payload_size: 1020, timestamp: "2026-04-16T12:12:00Z" },
+  { api: "/api/payments/charge", method: "POST", response_code: 504, response_time: 1480, payload_size: 1100, timestamp: "2026-04-16T12:13:00Z" },
+  { api: "/api/internal/debug", method: "GET", response_code: 200, response_time: 640, payload_size: 2200, timestamp: "2026-02-01T09:20:00Z" },
+  { api: "/api/internal/debug", method: "GET", response_code: 200, response_time: 690, payload_size: 2300, timestamp: "2026-02-01T09:25:00Z" },
+  { api: "/api/reports/export", method: "GET", response_code: 200, response_time: 980, payload_size: 7800, timestamp: "2026-04-16T15:41:00Z" },
+  { api: "/api/reports/export", method: "GET", response_code: 200, response_time: 1120, payload_size: 8000, timestamp: "2026-04-16T15:42:00Z" },
+  { api: "/api/reports/export", method: "GET", response_code: 429, response_time: 870, payload_size: 7600, timestamp: "2026-04-16T15:43:00Z" },
+];
 
 function buildStatus(api) {
   const level = String(api.risk_level || "").toUpperCase();
@@ -95,9 +113,138 @@ function mapLinksForGraph(rawEdges) {
     }));
 }
 
+function buildDemoDashboardFromLogs(logRows) {
+  const now = Date.now();
+  const groups = new Map();
+
+  for (const row of logRows || []) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+    const endpoint = String(row.api || row.endpoint || row.path || "").trim();
+    if (!endpoint) continue;
+    const method = String(row.method || "GET").toUpperCase();
+    const key = `${method} ${endpoint}`;
+    const ts = new Date(row.timestamp || now).getTime();
+    const responseCode = Number(row.response_code ?? 200);
+    const responseTime = Number(row.response_time ?? 0);
+
+    if (!groups.has(key)) {
+      groups.set(key, {
+        endpoint,
+        method,
+        call_count: 0,
+        error_count: 0,
+        total_response_time: 0,
+        last_seen_ts: 0,
+      });
+    }
+
+    const g = groups.get(key);
+    g.call_count += 1;
+    g.total_response_time += Number.isFinite(responseTime) ? responseTime : 0;
+    if (Number.isFinite(responseCode) && responseCode >= 400) {
+      g.error_count += 1;
+    }
+    if (Number.isFinite(ts)) {
+      g.last_seen_ts = Math.max(g.last_seen_ts, ts);
+    }
+  }
+
+  const apis = Array.from(groups.values()).map((g) => {
+    const errorRate = g.call_count > 0 ? g.error_count / g.call_count : 0;
+    const avgResponseTime = g.call_count > 0 ? g.total_response_time / g.call_count : 0;
+    const inactiveDays = g.last_seen_ts
+      ? Math.floor((now - g.last_seen_ts) / (1000 * 60 * 60 * 24))
+      : 0;
+
+    const isZombie = inactiveDays >= 30;
+    const isShadow = /(internal|debug|shadow)/i.test(g.endpoint);
+
+    let riskScore = 0.08;
+    if (errorRate >= 0.4) riskScore += 0.5;
+    else if (errorRate >= 0.2) riskScore += 0.35;
+    else if (errorRate >= 0.1) riskScore += 0.2;
+
+    if (avgResponseTime >= 1200) riskScore += 0.35;
+    else if (avgResponseTime >= 700) riskScore += 0.22;
+    else if (avgResponseTime >= 400) riskScore += 0.12;
+
+    if (isZombie) riskScore += 0.3;
+    if (isShadow) riskScore += 0.18;
+
+    riskScore = Math.max(0, Math.min(1, riskScore));
+
+    let status = "Normal";
+    if (riskScore >= 0.8) status = "Critical";
+    else if (isZombie) status = "Zombie";
+    else if (riskScore >= 0.5) status = "Suspicious";
+
+    return {
+      id: g.endpoint,
+      endpoint: g.endpoint,
+      method: g.method,
+      risk_score: riskScore,
+      status,
+      error_rate: errorRate * 100,
+      inactive_days: inactiveDays,
+      calls: g.call_count,
+      response_time: avgResponseTime,
+      similar_api: null,
+      similarity: null,
+      relationship: isShadow ? "Shadow" : null,
+    };
+  });
+
+  const stats = {
+    total_apis: apis.length,
+    zombie_apis: apis.filter((a) => a.status === "Zombie").length,
+    critical_apis: apis.filter((a) => a.status === "Critical").length,
+    duplicate_apis: apis.filter((a) => a.relationship === "Duplicate").length,
+    shadow_apis: apis.filter((a) => a.relationship === "Shadow").length,
+  };
+
+  const graphData = {
+    nodes: apis.map((a) => ({
+      id: a.id,
+      name: a.endpoint,
+      val: a.risk_score * 10 + 3,
+      status: a.status,
+      risk: a.risk_score,
+    })),
+    links: apis
+      .filter((a) => a.status === "Critical" || a.status === "Suspicious")
+      .slice(0, 4)
+      .map((a, i, arr) =>
+        i < arr.length - 1
+          ? {
+              source: arr[i].id,
+              target: arr[i + 1].id,
+              type: "fingerprint",
+              label: "Risk path",
+            }
+          : null,
+      )
+      .filter(Boolean),
+  };
+
+  const alerts = apis
+    .filter((a) => a.status === "Critical" || a.status === "Suspicious")
+    .slice(0, 6)
+    .map((a, idx) => ({
+      id: `demo-alert-${idx}`,
+      read: false,
+      severity: a.status === "Critical" ? "high" : "medium",
+      message: `${a.status} risk on ${a.endpoint}`,
+      time: "just now",
+    }));
+
+  return { apis, stats, graphData, alerts };
+}
+
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, profile, refreshProfile, isDemoMode, isAdmin } = useAuth();
   const uploadInputRef = useRef(null);
+  const [demoLogs, setDemoLogs] = useState(DEMO_LOGS);
   const [apis, setApis] = useState([]);
   const [stats, setStats] = useState(null);
   const [graphData, setGraphData] = useState(null);
@@ -115,6 +262,17 @@ export default function DashboardPage() {
   }, []);
 
   const fetchData = useCallback(async () => {
+    if (isDemoMode) {
+      const demoData = buildDemoDashboardFromLogs(demoLogs);
+      setApis(demoData.apis);
+      setStats(demoData.stats);
+      setGraphData(demoData.graphData);
+      setAlerts(demoData.alerts);
+      updateLastUpdated();
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const [analysisRes, graphRes, alertsRes] = await Promise.all([
@@ -151,20 +309,32 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [updateLastUpdated, addToast]);
+  }, [isDemoMode, demoLogs, updateLastUpdated, addToast]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      addToast("New anomaly detected in API traffic", "high");
-    }, 8000);
-    return () => clearTimeout(timer);
-  }, [addToast]);
+    if (!isDemoMode && isAdmin) {
+      router.replace("/admin");
+    }
+  }, [isDemoMode, isAdmin, router]);
+
+  useEffect(() => {
+    if (isDemoMode) return;
+    refreshProfile();
+  }, [isDemoMode, refreshProfile]);
+
+  const isProfileComplete =
+    isDemoMode || (!!profile?.role?.trim() && !!profile?.country?.trim());
 
   const handleUploadClick = () => {
+    if (!isProfileComplete) {
+      addToast("You must complete your profile before uploading logs", "medium");
+      router.push("/profile");
+      return;
+    }
     uploadInputRef.current?.click();
   };
 
@@ -174,6 +344,32 @@ export default function DashboardPage() {
 
     setUploading(true);
     try {
+      if (isDemoMode) {
+        const raw = await file.text();
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+          throw new Error("JSON must be an array of log records.");
+        }
+        const hasInvalidRecord = parsed.some(
+          (row) => !row || typeof row !== "object" || Array.isArray(row),
+        );
+        if (hasInvalidRecord) {
+          throw new Error("Each log entry must be an object.");
+        }
+        const demoData = buildDemoDashboardFromLogs(parsed);
+        setDemoLogs(parsed);
+        setApis(demoData.apis);
+        setStats(demoData.stats);
+        setGraphData(demoData.graphData);
+        setAlerts(demoData.alerts);
+        addToast(
+          `Demo mode: loaded ${parsed.length} log records into dashboard`,
+          "success",
+        );
+        updateLastUpdated();
+        return;
+      }
+
       const result = await uploadLogFile(file, api);
       await fetchData();
       addToast(`Uploaded ${result.count} log records`, "success");
@@ -238,12 +434,25 @@ export default function DashboardPage() {
                 onClick={handleUploadClick}
                 disabled={uploading}
                 className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm text-white font-medium transition-all glow-blue disabled:opacity-60 disabled:cursor-not-allowed"
+                title="Upload API logs"
               >
                 <Upload size={13} />
                 {uploading ? "Uploading..." : "Upload Logs"}
               </button>
             </div>
           </motion.div>
+
+          {!isProfileComplete && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 text-amber-300 text-sm">
+              Complete your profile (role and country) to enable log uploads.
+            </div>
+          )}
+
+          {isDemoMode && (
+            <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl px-4 py-3 text-cyan-300 text-sm">
+              Demo mode: uploads are validated locally and not saved to backend.
+            </div>
+          )}
 
           <AlertBanner stats={stats} />
 

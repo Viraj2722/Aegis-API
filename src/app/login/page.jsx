@@ -8,7 +8,7 @@ import { ShieldCheck, Eye, EyeOff, Zap } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 export default function LoginPage() {
-  const { login, loginDemo, loginWithGoogle, loading, error, setError, user, isReady } =
+  const { login, loginDemo, loginWithGoogle, loading, error, setError, user, isReady, isDemoMode, isAdmin } =
     useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -16,10 +16,13 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (isReady && user) {
+    if (!isReady || !user) return;
+    if (isDemoMode) {
       router.replace("/dashboard");
+      return;
     }
-  }, [isReady, user, router]);
+    router.replace(isAdmin ? "/admin" : "/dashboard");
+  }, [isReady, user, isDemoMode, isAdmin, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
