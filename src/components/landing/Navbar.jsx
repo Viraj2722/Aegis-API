@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import BrandLogo from "../BrandLogo";
 
 const navLinks = [
   { label: "Features", href: "/#features" },
@@ -39,27 +40,7 @@ export default function Navbar({ hideAuthActions = false }) {
         }`}
       >
         <div className="flex items-center justify-between h-12">
-          <Link href="/" className="flex items-center gap-2">
-            <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none">
-              <path
-                d="M12 2L22 7V13C22 18 17.5 22.5 12 24C6.5 22.5 2 18 2 13V7L12 2Z"
-                fill="rgba(0,212,255,0.12)"
-                stroke="#00d4ff"
-                strokeWidth="1.5"
-                style={{ filter: "drop-shadow(0 0 6px rgba(0,212,255,0.5))" }}
-              />
-              <path
-                d="M12 8L14.5 14M12 8L9.5 14M10.5 12H13.5"
-                stroke="#00d4ff"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <span className="font-black text-lg text-white tracking-tight">
-              Aegis<span className="gradient-text">API</span>
-            </span>
-          </Link>
+          <BrandLogo size="sm" />
 
           <div className="hidden md:flex items-center gap-8 text-sm text-slate-400">
             {navLinks.map((item) => (

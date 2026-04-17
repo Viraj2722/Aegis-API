@@ -11,7 +11,6 @@ import {
   AlertTriangle,
   Flame,
   Database,
-  ShieldCheck,
   Bell,
   LogOut,
   X,
@@ -31,6 +30,7 @@ import Heatmap from "../../components/admin-dashboard/Heatmap";
 import AgentStatus from "../../components/admin-dashboard/AgentStatus";
 import PrivacyPanel from "../../components/admin-dashboard/PrivacyPanel";
 import HelpPanel from "../../components/admin-dashboard/HelpPanel";
+import BrandLogo from "../../components/BrandLogo";
 import {
   globalStats as defaultGlobalStats,
   ingestionStats as defaultIngestionStats,
@@ -54,8 +54,7 @@ function Navbar({ setHelpOpen, onSignOut }) {
     <header className="sticky top-0 z-50 border-b border-slate-800/50 bg-[#050a14]/90 backdrop-blur-lg">
       <div className="max-w-[1400px] mx-auto px-8 lg:px-12 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <ShieldCheck className="text-sky-400" size={18} />
-          <span className="text-white font-semibold">AegisAPI Admin</span>
+          <BrandLogo size="sm" />
         </div>
 
         <div className="flex items-center gap-3">

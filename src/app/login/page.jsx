@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ShieldCheck, Eye, EyeOff, Zap } from "lucide-react";
+import { Eye, EyeOff, Zap } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import BrandLogo from "../../components/BrandLogo";
 
 export default function LoginPage() {
   const { login, loginDemo, loginWithGoogle, loading, error, setError, user, isReady, isDemoMode, isAdmin } =
@@ -50,11 +51,8 @@ export default function LoginPage() {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center glow-blue">
-            <ShieldCheck size={20} className="text-white" />
-          </div>
-          <span className="text-2xl font-bold gradient-text">AegisAPI</span>
+        <div className="flex items-center justify-center mb-8">
+          <BrandLogo size="md" />
         </div>
 
         <div className="glass rounded-2xl p-8 glow-blue">

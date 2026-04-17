@@ -4,7 +4,6 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
-  ShieldCheck,
   LogOut,
   User,
   LayoutDashboard,
@@ -14,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "next/navigation";
+import BrandLogo from "../BrandLogo";
 
 export default function Navbar({ alerts = [], lastUpdated }) {
   const { user, logout, isAdmin } = useAuth();
@@ -28,10 +28,7 @@ export default function Navbar({ alerts = [], lastUpdated }) {
   return (
     <nav className="glass border-b border-slate-800/60 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center glow-blue">
-          <ShieldCheck size={16} className="text-white" />
-        </div>
-        <span className="text-lg font-bold gradient-text">AegisAPI</span>
+        <BrandLogo size="sm" />
         <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
           <Activity size={10} className="text-emerald-400 animate-pulse" />
           <span className="text-emerald-400 text-xs font-medium">Live</span>
