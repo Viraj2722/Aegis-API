@@ -56,7 +56,7 @@ const Rule = ({ met, label }) => (
 );
 
 export default function SignupPage() {
-  const { signup, loading, error, setError, user, isReady } = useAuth();
+  const { signup, loginWithGoogle, loading, error, setError, user, isReady } = useAuth();
   const router = useRouter();
   const [form, setForm] = useState({
     name: "",
@@ -97,8 +97,8 @@ export default function SignupPage() {
     if (ok) router.push("/dashboard");
   };
 
-  const handleGoogleOAuth = () => {
-    window.location.href = "/api/auth/google";
+  const handleGoogleOAuth = async () => {
+    await loginWithGoogle();
   };
 
   return (

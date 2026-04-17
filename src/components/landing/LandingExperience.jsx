@@ -1,16 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ShieldAnimation from "./ShieldAnimation";
 import Landing from "./Landing";
 
 export default function LandingExperience() {
-  const [shieldDone, setShieldDone] = useState(false);
+  const [showShield, setShowShield] = useState(false);
+
+  useEffect(() => {
+    // Run intro only after mount so SSR and hydration markup stay identical.
+    const timer = setTimeout(() => setShowShield(true), 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <>
-      <ShieldAnimation onComplete={() => setShieldDone(true)} />
-      {shieldDone && <Landing />}
+      {showShield && <ShieldAnimation onComplete={() => setShowShield(false)} />}
+      <Landing />
     </>
   );
 }

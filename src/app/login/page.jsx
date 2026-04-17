@@ -8,7 +8,7 @@ import { ShieldCheck, Eye, EyeOff, Zap } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 export default function LoginPage() {
-  const { login, loginDemo, loading, error, setError, user, isReady } =
+  const { login, loginDemo, loginWithGoogle, loading, error, setError, user, isReady } =
     useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -32,8 +32,8 @@ export default function LoginPage() {
     router.push("/dashboard");
   };
 
-  const handleGoogleOAuth = () => {
-    window.location.href = "/api/auth/google";
+  const handleGoogleOAuth = async () => {
+    await loginWithGoogle();
   };
 
   return (

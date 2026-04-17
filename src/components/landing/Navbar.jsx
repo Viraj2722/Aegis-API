@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -62,16 +63,21 @@ export default function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <button className="text-sm text-slate-400 hover:text-white transition-colors px-3 py-1.5 font-medium">
-              Sign In
-            </button>
-            <motion.button
-              className="btn-primary px-4 py-2 rounded-xl text-white text-sm font-semibold"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+            <Link
+              href="/login"
+              className="text-sm text-slate-400 hover:text-white transition-colors px-3 py-1.5 font-medium"
             >
-              Get Started
-            </motion.button>
+              Sign In
+            </Link>
+            <Link href="/signup">
+              <motion.button
+                className="btn-primary px-4 py-2 rounded-xl text-white text-sm font-semibold"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                Get Started
+              </motion.button>
+            </Link>
           </div>
 
           <button
@@ -125,12 +131,18 @@ export default function Navbar() {
                   ),
                 )}
                 <div className="pt-2 flex gap-3">
-                  <button className="text-sm text-slate-400 hover:text-white transition-colors font-medium">
+                  <Link
+                    href="/login"
+                    className="text-sm text-slate-400 hover:text-white transition-colors font-medium"
+                    onClick={() => setMobileOpen(false)}
+                  >
                     Sign In
-                  </button>
-                  <button className="btn-primary px-4 py-2 rounded-xl text-white text-sm font-semibold">
-                    Get Started
-                  </button>
+                  </Link>
+                  <Link href="/signup" onClick={() => setMobileOpen(false)}>
+                    <button className="btn-primary px-4 py-2 rounded-xl text-white text-sm font-semibold">
+                      Get Started
+                    </button>
+                  </Link>
                 </div>
               </div>
             </motion.div>

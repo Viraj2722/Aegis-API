@@ -1,11 +1,42 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { supabase } from "../utils/supabaseClient";
 
 const AuthContext = createContext(null);
 const TOKEN_KEY = "aegis_token";
-const USER_KEY = "aegis_user";
 const DEMO_TOKEN = "demo_token";
+
+function mapSupabaseUser(rawUser) {
+  if (!rawUser) return null;
+  const meta = rawUser.user_metadata || {};
+  return {
+    id: rawUser.id,
+    name:
+      meta.full_name ||
+      meta.name ||
+      rawUser.email?.split("@")[0] ||
+      "User",
+    email: rawUser.email,
+    avatar_url: meta.avatar_url || null,
+  };
+}
+
+async function upsertProfile(user) {
+  if (!user) return;
+  const metadata = user.user_metadata || {};
+
+  const profileRow = {
+    id: user.id,
+    full_name:
+      metadata.full_name || metadata.name || user.email?.split("@")[0] || null,
+    company_name: metadata.company_name || null,
+    role: metadata.role || null,
+    avatar_url: metadata.avatar_url || null,
+  };
+
+  await supabase.from("profiles").upsert(profileRow, { onConflict: "id" });
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -14,17 +45,47 @@ export function AuthProvider({ children }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(USER_KEY);
-      if (raw) {
-        setUser(JSON.parse(raw));
+    let mounted = true;
+
+    const initSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!mounted) return;
+
+      const mappedUser = mapSupabaseUser(data.session?.user);
+      setUser(mappedUser);
+      if (mappedUser) {
+        localStorage.removeItem(TOKEN_KEY);
+        upsertProfile(data.session.user).catch(() => {
+          // Profile write can fail if RLS policies are not configured yet.
+        });
       }
-    } catch {
-      localStorage.removeItem(USER_KEY);
-      localStorage.removeItem(TOKEN_KEY);
-    } finally {
       setIsReady(true);
-    }
+    };
+
+    initSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const mappedUser = mapSupabaseUser(session?.user);
+      setUser(mappedUser);
+
+      if (mappedUser) {
+        localStorage.removeItem(TOKEN_KEY);
+        upsertProfile(session.user).catch(() => {
+          // Profile write can fail if RLS policies are not configured yet.
+        });
+      }
+
+      if (!isReady) {
+        setIsReady(true);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email, password) => {
@@ -36,16 +97,24 @@ export function AuthProvider({ children }) {
         return false;
       }
 
-      const displayName = email.split("@")[0] || "User";
-      const loginUser = {
-        id: Date.now(),
-        name: displayName.charAt(0).toUpperCase() + displayName.slice(1),
-        email,
-      };
+      const { data, error: signInError } = await supabase.auth.signInWithPassword(
+        {
+          email,
+          password,
+        },
+      );
 
-      localStorage.setItem(TOKEN_KEY, "local_token");
-      localStorage.setItem(USER_KEY, JSON.stringify(loginUser));
-      setUser(loginUser);
+      if (signInError) {
+        setError(signInError.message || "Login failed");
+        return false;
+      }
+
+      if (data.user) {
+        await upsertProfile(data.user).catch(() => {
+          // Profile write can fail if RLS policies are not configured yet.
+        });
+      }
+
       return true;
     } catch {
       setError("Login failed");
@@ -64,10 +133,27 @@ export function AuthProvider({ children }) {
         return false;
       }
 
-      const signupUser = { id: Date.now(), name, email };
-      localStorage.setItem(TOKEN_KEY, "local_token");
-      localStorage.setItem(USER_KEY, JSON.stringify(signupUser));
-      setUser(signupUser);
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+          },
+        },
+      });
+
+      if (signUpError) {
+        setError(signUpError.message || "Signup failed");
+        return false;
+      }
+
+      if (data.user) {
+        await upsertProfile(data.user).catch(() => {
+          // Profile write can fail if RLS policies are not configured yet.
+        });
+      }
+
       return true;
     } catch {
       setError("Signup failed");
@@ -80,13 +166,36 @@ export function AuthProvider({ children }) {
   const loginDemo = () => {
     const demoUser = { id: 0, name: "Demo User", email: "demo@aegisapi.io" };
     localStorage.setItem(TOKEN_KEY, DEMO_TOKEN);
-    localStorage.setItem(USER_KEY, JSON.stringify(demoUser));
     setUser(demoUser);
   };
 
-  const logout = () => {
+  const loginWithGoogle = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const redirectTo = `${window.location.origin}/dashboard`;
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo },
+      });
+
+      if (oauthError) {
+        setError(oauthError.message || "Google login failed");
+        return false;
+      }
+
+      return true;
+    } catch {
+      setError("Google login failed");
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async () => {
     localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    await supabase.auth.signOut();
     setUser(null);
   };
 
@@ -99,6 +208,7 @@ export function AuthProvider({ children }) {
       isReady,
       login,
       signup,
+      loginWithGoogle,
       loginDemo,
       logout,
     }),

@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
+import Link from "next/link";
 
 export default function FinalCTA() {
   const ref = useRef(null);
@@ -51,61 +52,63 @@ export default function FinalCTA() {
             perimeter. Setup takes under 5 minutes. No credit card required.
           </p>
 
-          <motion.button
-            className="btn-primary px-10 py-5 rounded-2xl text-white font-bold text-base tracking-wide relative overflow-hidden group"
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.97 }}
-            animate={
-              isInView
-                ? {
-                    boxShadow: [
-                      "0 0 20px rgba(14,165,233,0.4)",
-                      "0 0 50px rgba(14,165,233,0.7)",
-                      "0 0 20px rgba(14,165,233,0.4)",
-                    ],
-                  }
-                : {}
-            }
-            transition={{ duration: 2.5, repeat: Infinity }}
-          >
-            <div
-              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%)",
-                animation: "shimmer 1.5s infinite",
-              }}
-            />
-            <span className="relative flex items-center gap-3">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
-                />
-              </svg>
-              Start Securing Your APIs - Free
-              <svg
-                className="w-4 h-4 group-hover:translate-x-1 transition-transform"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
-                />
-              </svg>
-            </span>
-          </motion.button>
+          <Link href="/signup">
+            <motion.button
+              className="btn-primary px-10 py-5 rounded-2xl text-white font-bold text-base tracking-wide relative overflow-hidden group"
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              animate={
+                isInView
+                  ? {
+                      boxShadow: [
+                        "0 0 20px rgba(14,165,233,0.4)",
+                        "0 0 50px rgba(14,165,233,0.7)",
+                        "0 0 20px rgba(14,165,233,0.4)",
+                      ],
+                    }
+                  : {}
+              }
+              transition={{ duration: 2.5, repeat: Infinity }}
+            >
+              <div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%)",
+                  animation: "shimmer 1.5s infinite",
+                }}
+              />
+              <span className="relative flex items-center gap-3">
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
+                  />
+                </svg>
+                Start Securing Your APIs - Free
+                <svg
+                  className="w-4 h-4 group-hover:translate-x-1 transition-transform"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
+                  />
+                </svg>
+              </span>
+            </motion.button>
+          </Link>
 
           <motion.div
             initial={{ opacity: 0 }}

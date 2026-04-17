@@ -12,6 +12,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.103.3",
     "axios": "^1.15.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",
@@ -22,8 +23,8 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.27",
-    "cross-env": "^7.0.3",
     "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
     "eslint": "^9.39.4",
     "eslint-config-next": "15.1.0",
     "postcss": "^8.5.9",

@@ -138,7 +138,7 @@ export default function Hero() {
         <div className="scan-line" />
       </div>
 
-      <div className="relative z-10 max-w-6xl mx-auto px-6 text-center">
+      <div className="relative z-10 max-w-6xl mx-auto px-6 pt-20 md:pt-24 text-center">
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -158,13 +158,14 @@ export default function Hero() {
             variants={itemVariants}
             className="text-5xl md:text-7xl lg:text-8xl font-black leading-[0.9] tracking-tight mb-6"
           >
-            <span className="gradient-text">Expose the</span>
-            <br />
-            <span className="text-white">Invisible.</span>
-            <br />
-            <span className="gradient-text">Secure the</span>
-            <br />
-            <span className="text-white">Forgotten.</span>
+            <span className="block whitespace-nowrap">
+              <span className="gradient-text">Expose the</span>{" "}
+              <span className="text-white">Invisible.</span>
+            </span>
+            <span className="block whitespace-nowrap">
+              <span className="gradient-text">Secure the</span>{" "}
+              <span className="text-white">Forgotten.</span>
+            </span>
           </motion.h1>
 
           <motion.p
@@ -283,21 +284,6 @@ export default function Hero() {
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      <motion.div
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.4 }}
-        transition={{ delay: 2 }}
-      >
-        <span className="text-xs font-mono tracking-widest text-cyan-400 uppercase">
-          Scroll
-        </span>
-        <motion.div
-          className="w-px h-8 bg-gradient-to-b from-cyan-400 to-transparent"
-          animate={{ scaleY: [1, 0.4, 1], opacity: [0.6, 1, 0.6] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-        />
-      </motion.div>
     </section>
   );
 }
