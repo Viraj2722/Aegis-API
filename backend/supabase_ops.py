@@ -3,10 +3,12 @@ Supabase client and utilities for backend operations
 """
 
 import os
+import math
 from supabase import create_client, Client
 from typing import List, Dict, Any
 from pathlib import Path
 from dotenv import load_dotenv
+import pandas as pd
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
@@ -22,6 +24,34 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 class SupabaseOps:
     """Helper class for Supabase database operations"""
+
+    @staticmethod
+    def _as_iso(value):
+        if value is None:
+            return None
+        if isinstance(value, pd.Timestamp):
+            return value.to_pydatetime().isoformat()
+        if hasattr(value, "isoformat"):
+            return value.isoformat()
+        return value
+
+    @staticmethod
+    def _as_float(value, default: float = 0.0) -> float:
+        try:
+            v = float(value)
+            if math.isnan(v) or math.isinf(v):
+                return default
+            return v
+        except Exception:
+            return default
+
+    @staticmethod
+    def _as_int(value, default: int = 0) -> int:
+        try:
+            v = int(float(value))
+            return v
+        except Exception:
+            return default
 
     @staticmethod
     def get_user_id_from_token(access_token: str) -> str:
@@ -58,22 +88,22 @@ class SupabaseOps:
                 "user_id": user_id,
                 "endpoint": endpoint,
                 "method": record.get("method", "GET"),
-                "call_count": int(record.get("call_count", 0)),
-                "error_count": int(record.get("error_count", 0)),
-                "error_rate": float(record.get("error_rate", 0)),
-                "avg_response_time": float(record.get("avg_response_time", 0)),
-                "avg_latency": float(record.get("avg_latency", 0)),
-                "payload_size": float(record.get("payload_size", 0)),
-                "days_active": int(record.get("days_active", 0)),
-                "days_inactive": int(record.get("days_inactive", 0)),
-                "daily_calls": float(record.get("daily_calls", 0)),
-                "last_seen": record.get("last_seen"),
-                "first_seen": record.get("first_seen"),
-                "risk_score": float(record.get("risk_score", 0)),
+                "call_count": SupabaseOps._as_int(record.get("call_count", 0)),
+                "error_count": SupabaseOps._as_int(record.get("error_count", 0)),
+                "error_rate": SupabaseOps._as_float(record.get("error_rate", 0)),
+                "avg_response_time": SupabaseOps._as_float(record.get("avg_response_time", 0)),
+                "avg_latency": SupabaseOps._as_float(record.get("avg_latency", 0)),
+                "payload_size": SupabaseOps._as_float(record.get("payload_size", 0)),
+                "days_active": SupabaseOps._as_int(record.get("days_active", 0)),
+                "days_inactive": SupabaseOps._as_int(record.get("days_inactive", 0)),
+                "daily_calls": SupabaseOps._as_float(record.get("daily_calls", 0)),
+                "last_seen": SupabaseOps._as_iso(record.get("last_seen")),
+                "first_seen": SupabaseOps._as_iso(record.get("first_seen")),
+                "risk_score": SupabaseOps._as_float(record.get("risk_score", 0)),
                 "risk_level": record.get("risk_level", "LOW"),
                 "is_zombie": bool(record.get("is_zombie", False)),
                 "is_shadow_api": bool(record.get("is_shadow_api", False)),
-                "anomaly_score": float(record.get("anomaly_score", 0)),
+                "anomaly_score": SupabaseOps._as_float(record.get("anomaly_score", 0)),
                 "fingerprint": record.get("fingerprint"),
             }
             records.append(api_record)
@@ -130,9 +160,9 @@ class SupabaseOps:
                     "alert_type": alert_type,
                     "severity": row['risk_level'],
                     "title": f"{alert_type} detected on {row.get('api')}",
-                    "description": f"API {row.get('api')} has risk score {row['risk_score']:.0f}/100. "
-                                   f"Error rate: {row['error_rate']*100:.1f}%, "
-                                   f"Avg latency: {row['avg_response_time']:.0f}ms",
+                    "description": f"API {row.get('api')} has risk score {SupabaseOps._as_float(row.get('risk_score')):.0f}/100. "
+                                   f"Error rate: {SupabaseOps._as_float(row.get('error_rate'))*100:.1f}%, "
+                                   f"Avg latency: {SupabaseOps._as_float(row.get('avg_response_time')):.0f}ms",
                     "recommendation": SupabaseOps._get_recommendation(alert_type, row),
                     "is_resolved": False,
                 }

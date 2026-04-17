@@ -131,7 +131,7 @@ export default function DashboardPage() {
       setGraphData(transformed.graphData);
       setAlerts(formatAlerts(alertsRes.data?.alerts));
       updateLastUpdated();
-    } catch {
+    } catch (error) {
       setApis([]);
       setStats({
         total_apis: 0,
@@ -143,10 +143,15 @@ export default function DashboardPage() {
       setGraphData({ nodes: [], links: [] });
       setAlerts([]);
       updateLastUpdated();
+      const msg =
+        error?.response?.data?.detail ||
+        error?.message ||
+        "Failed to fetch analysis data";
+      addToast(msg, "high");
     } finally {
       setLoading(false);
     }
-  }, [updateLastUpdated]);
+  }, [updateLastUpdated, addToast]);
 
   useEffect(() => {
     fetchData();
