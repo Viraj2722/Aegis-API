@@ -3,6 +3,120 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+let sharedAudioContext = null;
+
+const getAudioContext = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const AudioContextConstructor =
+    window.AudioContext || window.webkitAudioContext;
+
+  if (!AudioContextConstructor) {
+    return null;
+  }
+
+  if (!sharedAudioContext) {
+    sharedAudioContext = new AudioContextConstructor();
+  }
+
+  return sharedAudioContext;
+};
+
+const playTone = ({
+  frequency,
+  duration,
+  type = "sine",
+  gain = 0.08,
+  startTime = 0,
+}) => {
+  const audioContext = getAudioContext();
+
+  if (!audioContext) {
+    return;
+  }
+
+  if (audioContext.state === "suspended") {
+    audioContext.resume().catch(() => {});
+  }
+
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(
+    frequency,
+    audioContext.currentTime + startTime,
+  );
+
+  gainNode.gain.setValueAtTime(0, audioContext.currentTime + startTime);
+  gainNode.gain.linearRampToValueAtTime(
+    gain,
+    audioContext.currentTime + startTime + 0.02,
+  );
+  gainNode.gain.exponentialRampToValueAtTime(
+    0.0001,
+    audioContext.currentTime + startTime + duration,
+  );
+
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  oscillator.start(audioContext.currentTime + startTime);
+  oscillator.stop(audioContext.currentTime + startTime + duration);
+};
+
+const playShieldSound = (phase) => {
+  if (phase === "pulse") {
+    playTone({ frequency: 220, duration: 0.35, type: "triangle", gain: 0.03 });
+    playTone({
+      frequency: 330,
+      duration: 0.22,
+      type: "sine",
+      gain: 0.02,
+      startTime: 0.08,
+    });
+    return;
+  }
+
+  if (phase === "split") {
+    playTone({ frequency: 440, duration: 0.18, type: "sawtooth", gain: 0.03 });
+    playTone({
+      frequency: 660,
+      duration: 0.2,
+      type: "sine",
+      gain: 0.025,
+      startTime: 0.07,
+    });
+    playTone({
+      frequency: 880,
+      duration: 0.18,
+      type: "triangle",
+      gain: 0.02,
+      startTime: 0.14,
+    });
+    return;
+  }
+
+  if (phase === "burst") {
+    playTone({ frequency: 520, duration: 0.16, type: "triangle", gain: 0.035 });
+    playTone({
+      frequency: 780,
+      duration: 0.14,
+      type: "triangle",
+      gain: 0.03,
+      startTime: 0.06,
+    });
+    playTone({
+      frequency: 1040,
+      duration: 0.12,
+      type: "sine",
+      gain: 0.025,
+      startTime: 0.12,
+    });
+  }
+};
+
 const ShieldHalf = ({ side, animate }) => {
   const isLeft = side === "left";
 
@@ -32,7 +146,7 @@ const ShieldHalf = ({ side, animate }) => {
         <svg
           viewBox="0 0 200 240"
           className="w-full h-full"
-          style={{ filter: "drop-shadow(0 0 30px rgba(0,212,255,0.6))" }}
+          style={{ filter: "drop-shadow(0 0 18px rgba(255,255,255,0.08))" }}
         >
           <defs>
             <linearGradient
@@ -104,16 +218,6 @@ const ShieldHalf = ({ side, animate }) => {
             strokeWidth="0.8"
             strokeDasharray="4 3"
           />
-
-          <path
-            d="M100 70 L130 145 M100 70 L70 145 M80 118 L120 118"
-            fill="none"
-            stroke="rgba(0,212,255,0.9)"
-            strokeWidth="3.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            filter={`url(#glow${side})`}
-          />
         </svg>
       </div>
     </motion.div>
@@ -160,6 +264,12 @@ export default function ShieldAnimation({ onComplete }) {
 
     return () => [t1, t2, t3, t4].forEach(clearTimeout);
   }, [onComplete]);
+
+  useEffect(() => {
+    if (phase === "pulse" || phase === "split" || phase === "burst") {
+      playShieldSound(phase);
+    }
+  }, [phase]);
 
   const isOpen = phase === "split" || phase === "burst" || phase === "done";
   const isBurst = phase === "burst" || phase === "done";
@@ -281,7 +391,7 @@ export default function ShieldAnimation({ onComplete }) {
                 className="rounded-full"
                 style={{
                   background:
-                    "radial-gradient(circle, rgba(0,212,255,1) 0%, rgba(124,58,237,0.5) 40%, transparent 70%)",
+                    "radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 40%, transparent 70%)",
                   width: 120,
                   height: 120,
                 }}

@@ -106,5 +106,5 @@ After upload, the dashboard refreshes and re-runs analysis.
 
 ## Notes
 
-- The app uses separate Next.js output directories for dev and build to avoid cache corruption issues.
+- Next.js build output is generated in `.next` and should not be committed.
 - The old Vite frontend is no longer part of the runtime.

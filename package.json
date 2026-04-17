@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "predev": "node -e \"const fs=require('fs'); for (const d of ['.next-dev','.next']) { if(fs.existsSync(d)) fs.rmSync(d,{recursive:true,force:true}); }\"",
-    "dev": "concurrently -k -n NEXT,API -c cyan,green \"cross-env NEXT_DIST_DIR=.next-dev next dev -p 3000\" \"cd backend && .venv\\Scripts\\python -m uvicorn main:app --reload --port 8000\"",
-    "dev:reset": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; foreach ($d in @('.next-dev','.next-build','.next')) { if (Test-Path $d) { Remove-Item -Recurse -Force $d } }; npm run dev\"",
-    "prebuild": "node -e \"const fs=require('fs'); for (const d of ['.next-build','.next']) { if(fs.existsSync(d)) fs.rmSync(d,{recursive:true,force:true}); }\"",
-    "build": "cross-env NEXT_DIST_DIR=.next-build next build",
-    "start": "cross-env NEXT_DIST_DIR=.next-build next start",
+    "predev": "node -e \"const fs=require('fs'); if(fs.existsSync('.next')) fs.rmSync('.next',{recursive:true,force:true});\"",
+    "dev": "concurrently -n NEXT,API -c cyan,green \"next dev -p 3000\" \"cd backend && .venv\\Scripts\\python -m uvicorn main:app --reload --port 8000\"",
+    "dev:reset": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; if (Test-Path .next) { Remove-Item -Recurse -Force .next }; npm run dev\"",
+    "prebuild": "node -e \"const fs=require('fs'); if(fs.existsSync('.next')) fs.rmSync('.next',{recursive:true,force:true});\"",
+    "build": "next build",
+    "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {

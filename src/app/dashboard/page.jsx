@@ -24,10 +24,13 @@ const isDemo = () =>
 
 function buildStatus(api) {
   const level = String(api.risk_level || "").toUpperCase();
+  const numericRisk = Number(api.risk_score || 0);
+  const normalizedRisk = numericRisk > 1 ? numericRisk / 100 : numericRisk;
   if (level === "CRITICAL") return "Critical";
+  if (normalizedRisk >= 0.8) return "Critical";
   if (api.is_zombie) return "Zombie";
-  if (level === "HIGH" || level === "MEDIUM")
-    return "Suspicious";
+  if (level === "HIGH" || level === "MEDIUM") return "Suspicious";
+  if (normalizedRisk >= 0.5) return "Suspicious";
   return "Normal";
 }
 
@@ -103,6 +106,10 @@ export default function DashboardPage() {
   const [graphData, setGraphData] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [selectedApi, setSelectedApi] = useState(null);
+  const [selectedMitigation, setSelectedMitigation] = useState(null);
+  const [selectedMitigationLoading, setSelectedMitigationLoading] =
+    useState(false);
+  const [selectedMitigationError, setSelectedMitigationError] = useState("");
   const [clusterMode, setClusterMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState("");
@@ -163,6 +170,50 @@ export default function DashboardPage() {
     }, 8000);
     return () => clearTimeout(timer);
   }, [addToast]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadMitigation = async () => {
+      if (!selectedApi?.endpoint) {
+        setSelectedMitigation(null);
+        setSelectedMitigationLoading(false);
+        setSelectedMitigationError("");
+        return;
+      }
+
+      setSelectedMitigationLoading(true);
+      setSelectedMitigationError("");
+      setSelectedMitigation(null);
+
+      try {
+        const response = await api.post("/mitigations/generate", {
+          endpoint: selectedApi.endpoint,
+          method: selectedApi.method,
+        });
+
+        if (!active) return;
+        setSelectedMitigation(response.data || null);
+      } catch (error) {
+        if (!active) return;
+        setSelectedMitigationError(
+          error?.response?.data?.detail ||
+            error?.message ||
+            "Unable to generate mitigation techniques",
+        );
+      } finally {
+        if (active) {
+          setSelectedMitigationLoading(false);
+        }
+      }
+    };
+
+    loadMitigation();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedApi?.endpoint, selectedApi?.method]);
 
   const handleUploadClick = () => {
     uploadInputRef.current?.click();
@@ -314,6 +365,9 @@ export default function DashboardPage() {
 
         <ApiDetailPanel
           api={selectedApi}
+          mitigation={selectedMitigation}
+          mitigationLoading={selectedMitigationLoading}
+          mitigationError={selectedMitigationError}
           onClose={() => setSelectedApi(null)}
         />
         <Toast toasts={toasts} remove={removeToast} />

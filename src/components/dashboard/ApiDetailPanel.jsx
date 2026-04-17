@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Clock,
   Zap,
+  ShieldCheck,
 } from "lucide-react";
 
 const STATUS_COLORS = {
@@ -40,7 +41,28 @@ const RELATIONSHIP_INFO = {
   },
 };
 
-export default function ApiDetailPanel({ api, onClose }) {
+export default function ApiDetailPanel({
+  api,
+  onClose,
+  mitigation,
+  mitigationLoading,
+  mitigationError,
+}) {
+  const normalizedSteps =
+    (Array.isArray(mitigation?.mitigation_steps)
+      ? mitigation.mitigation_steps.filter(
+          (step) => typeof step === "string" && step.trim(),
+        )
+      : []) ||
+    (Array.isArray(mitigation?.mitigations)
+      ? mitigation.mitigations.flatMap((item) =>
+          (item?.steps || []).filter(
+            (step) => typeof step === "string" && step.trim(),
+          ),
+        )
+      : []) ||
+    [];
+
   return (
     <AnimatePresence>
       {api && (
@@ -193,6 +215,140 @@ export default function ApiDetailPanel({ api, onClose }) {
                     </li>
                   )}
                 </ul>
+              </div>
+
+              <div className="glass rounded-xl border border-cyan-500/20 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <ShieldCheck size={14} className="text-cyan-400" />
+                  <span className="text-white font-semibold text-sm">
+                    AI Mitigation Techniques
+                  </span>
+                </div>
+
+                {mitigationLoading && (
+                  <p className="text-xs text-slate-400">
+                    Generating mitigation guidance...
+                  </p>
+                )}
+
+                {!mitigationLoading && mitigationError && (
+                  <p className="text-xs text-red-300">{mitigationError}</p>
+                )}
+
+                {!mitigationLoading && !mitigationError && !mitigation && (
+                  <p className="text-xs text-slate-400">
+                    No mitigation guidance loaded yet.
+                  </p>
+                )}
+
+                {!mitigationLoading && !mitigationError && mitigation && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-900/50 border border-slate-700/60 px-3 py-2">
+                      <span className="text-[11px] uppercase tracking-wider text-slate-400">
+                        Source
+                      </span>
+                      <span className="text-[11px] font-semibold text-cyan-300">
+                        {mitigation.source || "generated"}
+                      </span>
+                    </div>
+
+                    {mitigation.summary && (
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        {mitigation.summary}
+                      </p>
+                    )}
+
+                    {(mitigation.why_flagged || []).length > 0 && (
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wider text-slate-400 mb-1.5">
+                          Why Flagged
+                        </p>
+                        <ul className="space-y-1.5">
+                          {mitigation.why_flagged.map((reason, idx) => (
+                            <li
+                              key={`${reason}-${idx}`}
+                              className="flex items-start gap-2 text-xs text-slate-300"
+                            >
+                              <span className="text-cyan-400 mt-0.5">•</span>
+                              {reason}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {Array.isArray(mitigation.mitigations) &&
+                    mitigation.mitigations.length > 0 ? (
+                      <div className="space-y-2.5">
+                        {mitigation.mitigations.map((item, idx) => (
+                          <div
+                            key={`${item.title || "mitigation"}-${idx}`}
+                            className="rounded-lg border border-slate-700/70 bg-slate-900/40 p-2.5"
+                          >
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <p className="text-xs text-white font-semibold">
+                                {item.title || "Mitigation"}
+                              </p>
+                              {item.priority && (
+                                <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300">
+                                  {item.priority}
+                                </span>
+                              )}
+                            </div>
+                            {item.why && (
+                              <p className="text-[11px] text-slate-400 mb-1.5">
+                                {item.why}
+                              </p>
+                            )}
+                            {(item.steps || []).length > 0 && (
+                              <ul className="space-y-1">
+                                {item.steps.map((step, sidx) => (
+                                  <li
+                                    key={`${step}-${sidx}`}
+                                    className="text-xs text-slate-300 leading-relaxed"
+                                  >
+                                    {sidx + 1}. {step}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400">
+                        No mitigation techniques available yet.
+                      </p>
+                    )}
+
+                    {normalizedSteps.length > 0 && (
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wider text-slate-400 mb-1.5">
+                          Mitigation Steps
+                        </p>
+                        <ul className="space-y-1.5">
+                          {normalizedSteps.map((step, idx) => (
+                            <li
+                              key={`${step}-${idx}`}
+                              className="text-xs text-slate-300 leading-relaxed"
+                            >
+                              {idx + 1}. {step}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {normalizedSteps.length === 0 &&
+                      Array.isArray(mitigation.mitigations) &&
+                      mitigation.mitigations.length > 0 && (
+                        <p className="text-xs text-slate-400">
+                          The LLM returned mitigation techniques but no
+                          flattened step list.
+                        </p>
+                      )}
+                  </div>
+                )}
               </div>
 
               {api.similar_api && (
