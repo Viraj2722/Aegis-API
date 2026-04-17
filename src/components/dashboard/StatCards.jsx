@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Globe, Skull, AlertTriangle, Copy, EyeOff } from "lucide-react";
+import { Globe, Skull, AlertTriangle, Copy, EyeOff, Zap } from "lucide-react";
 
 const cards = [
   {
@@ -49,11 +49,20 @@ const cards = [
     bg: "bg-green-500/10",
     border: "border-green-500/20",
   },
+  {
+    key: "traffic_spike_apis",
+    label: "Traffic Spikes",
+    icon: Zap,
+    glow: "glow-blue",
+    textColor: "text-cyan-400",
+    bg: "bg-cyan-500/10",
+    border: "border-cyan-500/20",
+  },
 ];
 
 export default function StatCards({ stats }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
       {cards.map((c, i) => {
         const Icon = c.icon;
         const value = stats?.[c.key] ?? 0;
