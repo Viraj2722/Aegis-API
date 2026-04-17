@@ -34,3 +34,5 @@ yarn-error.log*
 # OS/editor artifacts
 .DS_Store
 Thumbs.db
+
+api_logs.json

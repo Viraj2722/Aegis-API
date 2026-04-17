@@ -307,12 +307,30 @@ class SupabaseOps:
             client = _require_supabase()
             result = (
                 client.table("profiles")
-                .select("id,full_name,company_name,role,country")
+                .select("*")
                 .eq("id", user_id)
                 .limit(1)
                 .execute()
             )
-            return result.data[0] if result.data else {}
+            if not result.data:
+                return {}
+
+            raw_profile = result.data[0] or {}
+
+            # Handle schema drift: some deployments use company_name, others use company.
+            company_value = (
+                raw_profile.get("company_name")
+                or raw_profile.get("company")
+                or raw_profile.get("organization")
+            )
+
+            return {
+                "id": raw_profile.get("id"),
+                "full_name": raw_profile.get("full_name"),
+                "company_name": company_value,
+                "role": raw_profile.get("role"),
+                "country": raw_profile.get("country"),
+            }
         except Exception as e:
             print(f"Error fetching user profile: {e}")
             return {}

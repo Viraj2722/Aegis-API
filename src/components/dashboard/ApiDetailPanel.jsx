@@ -36,7 +36,7 @@ const RELATIONSHIP_INFO = {
     desc: "This API was likely versioned or renamed. Legacy endpoint may still be exposed.",
   },
   Shadow: {
-    color: "text-purple-400 bg-purple-500/15",
+    color: "text-green-400 bg-green-500/15",
     desc: "Undocumented API behaving similarly to a known endpoint.",
   },
 };
@@ -89,7 +89,7 @@ export default function ApiDetailPanel({
                   API Detail
                 </p>
                 <div className="flex items-center gap-2">
-                  <span className="text-indigo-400 text-xs font-bold bg-indigo-500/10 px-2 py-0.5 rounded">
+                  <span className="text-emerald-400 text-xs font-bold bg-emerald-500/10 px-2 py-0.5 rounded">
                     {api.method}
                   </span>
                   <code className="text-white text-sm font-mono truncate max-w-[250px]">
@@ -203,7 +203,7 @@ export default function ApiDetailPanel({
                   )}
                   {api.similarity >= 80 && (
                     <li className="flex items-start gap-2 text-xs text-slate-300">
-                      <span className="text-purple-400 mt-0.5">•</span>
+                      <span className="text-green-400 mt-0.5">•</span>
                       {api.similarity}% behavioral similarity with another
                       endpoint
                     </li>
@@ -249,6 +249,15 @@ export default function ApiDetailPanel({
                       </span>
                       <span className="text-[11px] font-semibold text-cyan-300">
                         {mitigation.source || "generated"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-900/50 border border-slate-700/60 px-3 py-2">
+                      <span className="text-[11px] uppercase tracking-wider text-slate-400">
+                        Endpoint
+                      </span>
+                      <span className="text-[11px] font-semibold text-slate-200 truncate max-w-[210px]">
+                        {mitigation.endpoint || api.endpoint}
                       </span>
                     </div>
 
@@ -352,9 +361,9 @@ export default function ApiDetailPanel({
               </div>
 
               {api.similar_api && (
-                <div className="glass rounded-xl border border-purple-500/20 p-4">
+                <div className="glass rounded-xl border border-green-500/20 p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <Fingerprint size={14} className="text-purple-400" />
+                    <Fingerprint size={14} className="text-green-400" />
                     <span className="text-white font-semibold text-sm">
                       Fingerprint Insights
                     </span>
@@ -375,7 +384,7 @@ export default function ApiDetailPanel({
                         {api.similarity}%
                       </span>
                     </div>
-                    <code className="text-indigo-300 text-xs font-mono">
+                    <code className="text-emerald-300 text-xs font-mono">
                       {api.similar_api}
                     </code>
                   </div>

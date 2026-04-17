@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 import {
   ShieldCheck,
   Bell,
@@ -9,6 +10,7 @@ import {
   User,
   ChevronDown,
   Activity,
+  Bot,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -23,13 +25,13 @@ export default function Navbar({ alerts = [], lastUpdated }) {
 
   const handleLogout = () => {
     logout();
-    router.replace("/login");
+    router.replace("/");
   };
 
   return (
     <nav className="glass border-b border-slate-800/60 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center glow-blue">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center glow-blue">
           <ShieldCheck size={16} className="text-white" />
         </div>
         <span className="text-lg font-bold gradient-text">AegisAPI</span>
@@ -45,6 +47,14 @@ export default function Navbar({ alerts = [], lastUpdated }) {
             Updated {lastUpdated}
           </span>
         )}
+
+        <Link
+          href="/agents"
+          className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60 transition-all"
+        >
+          <Bot size={14} className="text-emerald-400" />
+          <span className="text-sm text-slate-200 font-medium">Agents</span>
+        </Link>
 
         <div className="relative">
           <button
@@ -121,7 +131,7 @@ export default function Navbar({ alerts = [], lastUpdated }) {
             }}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60 transition-all"
           >
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
               <User size={12} className="text-white" />
             </div>
             <span className="text-sm text-slate-300 hidden sm:block max-w-[100px] truncate">

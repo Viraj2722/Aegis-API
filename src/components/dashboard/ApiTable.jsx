@@ -20,7 +20,7 @@ const STATUS_STYLES = {
 const RELATIONSHIP_STYLES = {
   Duplicate: "bg-yellow-500/15 text-yellow-400",
   Renamed: "bg-blue-500/15 text-blue-400",
-  Shadow: "bg-purple-500/15 text-purple-400",
+  Shadow: "bg-green-500/15 text-green-400",
 };
 
 const RISK_COLOR = (score) => {
@@ -76,9 +76,9 @@ export default function ApiTable({ apis, onSelect, selected }) {
   const SortIcon = ({ k }) =>
     sort.key === k ? (
       sort.dir === "asc" ? (
-        <ChevronUp size={13} className="text-indigo-400" />
+        <ChevronUp size={13} className="text-emerald-400" />
       ) : (
-        <ChevronDown size={13} className="text-indigo-400" />
+        <ChevronDown size={13} className="text-emerald-400" />
       )
     ) : (
       <ArrowUpDown size={12} className="text-slate-600" />
@@ -96,7 +96,7 @@ export default function ApiTable({ apis, onSelect, selected }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search endpoints..."
-            className="w-full bg-slate-900/60 border border-slate-700/60 rounded-lg pl-8 pr-3 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/60 transition-all"
+            className="w-full bg-slate-900/60 border border-slate-700/60 rounded-lg pl-8 pr-3 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/60 transition-all"
           />
         </div>
         <div className="flex items-center gap-1.5">
@@ -105,7 +105,7 @@ export default function ApiTable({ apis, onSelect, selected }) {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all capitalize ${filter === f ? "bg-indigo-600 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700/60"}`}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all capitalize ${filter === f ? "bg-emerald-600 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700/60"}`}
             >
               {f.replace("_", " ")}
             </button>
@@ -154,10 +154,10 @@ export default function ApiTable({ apis, onSelect, selected }) {
                   exit={{ opacity: 0 }}
                   transition={{ delay: i * 0.02 }}
                   onClick={() => onSelect(api)}
-                  className={`border-b border-slate-800/40 cursor-pointer transition-all hover:bg-slate-800/30 ${selected?.id === api.id ? "bg-indigo-600/10 border-l-2 border-l-indigo-500" : ""}`}
+                  className={`border-b border-slate-800/40 cursor-pointer transition-all hover:bg-slate-800/30 ${selected?.id === api.id ? "bg-emerald-600/10 border-l-2 border-l-emerald-500" : ""}`}
                 >
                   <td className="px-4 py-3 font-mono text-xs text-slate-200 max-w-[200px] truncate">
-                    <span className="text-indigo-400 mr-1 text-[10px] font-bold bg-indigo-500/10 px-1.5 py-0.5 rounded">
+                    <span className="text-emerald-400 mr-1 text-[10px] font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
                       {api.method}
                     </span>
                     {api.endpoint}

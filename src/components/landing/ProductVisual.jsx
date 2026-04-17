@@ -37,7 +37,7 @@ function MiniGraph() {
     >
       <defs>
         <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#7c3aed" />
+          <stop offset="0%" stopColor="#22c55e" />
           <stop offset="100%" stopColor="#00d4ff" />
         </linearGradient>
         <linearGradient id="areaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -80,7 +80,11 @@ export default function ProductVisual() {
   const y = useTransform(scrollYProgress, [0, 1], [-30, 30]);
 
   return (
-    <section ref={ref} className="relative py-24 overflow-hidden">
+    <section
+      ref={ref}
+      id="dashboard"
+      className="relative py-24 overflow-hidden"
+    >
       <div
         className="absolute inset-0"
         style={{

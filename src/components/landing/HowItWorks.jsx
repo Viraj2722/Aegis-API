@@ -46,7 +46,7 @@ const steps = [
         />
       </svg>
     ),
-    color: "#7c3aed",
+    color: "#22c55e",
   },
   {
     number: "03",
@@ -134,7 +134,7 @@ export default function HowItWorks() {
             className="absolute left-6 md:left-1/2 top-0 bottom-0 w-px hidden md:block"
             style={{
               background:
-                "linear-gradient(180deg, rgba(0,212,255,0.4), rgba(124,58,237,0.4), rgba(239,68,68,0.4), rgba(16,185,129,0.4))",
+                "linear-gradient(180deg, rgba(0,212,255,0.4), rgba(34,197,94,0.4), rgba(239,68,68,0.4), rgba(16,185,129,0.4))",
             }}
           />
 

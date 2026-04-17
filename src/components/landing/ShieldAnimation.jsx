@@ -158,8 +158,8 @@ const ShieldHalf = ({ side, animate }) => {
             >
               <stop offset="0%" stopColor="#1e3a5f" />
               <stop offset="30%" stopColor="#0ea5e9" stopOpacity="0.5" />
-              <stop offset="60%" stopColor="#1a1040" />
-              <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.7" />
+              <stop offset="60%" stopColor="#052e1a" />
+              <stop offset="100%" stopColor="#22c55e" stopOpacity="0.7" />
             </linearGradient>
             <linearGradient
               id={`glassGrad${side}`}
@@ -230,7 +230,7 @@ const Particle = ({ style }) => (
     style={{
       width: Math.random() * 4 + 2,
       height: Math.random() * 4 + 2,
-      background: Math.random() > 0.5 ? "#00d4ff" : "#7c3aed",
+      background: Math.random() > 0.5 ? "#00d4ff" : "#22c55e",
       ...style,
     }}
     initial={{ opacity: 0, scale: 0 }}
@@ -290,7 +290,7 @@ export default function ShieldAnimation({ onComplete }) {
                 ? {
                     background: [
                       "radial-gradient(ellipse at center, rgba(0,212,255,0) 0%, transparent 70%)",
-                      "radial-gradient(ellipse at center, rgba(0,212,255,0.3) 0%, rgba(124,58,237,0.1) 40%, transparent 70%)",
+                      "radial-gradient(ellipse at center, rgba(0,212,255,0.3) 0%, rgba(34,197,94,0.1) 40%, transparent 70%)",
                       "radial-gradient(ellipse at center, rgba(0,212,255,0) 0%, transparent 70%)",
                     ],
                   }

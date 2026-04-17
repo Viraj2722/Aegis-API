@@ -118,8 +118,8 @@ export default function ApiGraph({ graphData, clusterMode, onToggleCluster }) {
       ctx.lineTo(t.x, t.y);
       ctx.strokeStyle =
         e.type === "fingerprint"
-          ? "rgba(139, 92, 246, 0.5)"
-          : "rgba(99, 102, 241, 0.25)";
+          ? "rgba(34, 197, 94, 0.5)"
+          : "rgba(16, 185, 129, 0.25)";
       ctx.lineWidth = e.type === "fingerprint" ? 1.5 : 1;
       if (e.type === "fingerprint") ctx.setLineDash([5, 5]);
       ctx.stroke();
@@ -187,7 +187,7 @@ export default function ApiGraph({ graphData, clusterMode, onToggleCluster }) {
     <div className="glass rounded-xl border border-slate-800/60">
       <div className="px-4 py-3 border-b border-slate-800/60 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <Network size={15} className="text-indigo-400" />
+          <Network size={15} className="text-emerald-400" />
           <span className="text-white font-semibold text-sm">
             API Relationship Graph
           </span>
@@ -195,7 +195,7 @@ export default function ApiGraph({ graphData, clusterMode, onToggleCluster }) {
         <div className="flex items-center gap-2">
           <button
             onClick={onToggleCluster}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${clusterMode ? "bg-indigo-600 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700/60"}`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${clusterMode ? "bg-emerald-600 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700/60"}`}
           >
             <Layers size={12} />
             Cluster View
@@ -251,7 +251,7 @@ export default function ApiGraph({ graphData, clusterMode, onToggleCluster }) {
             animate={{ opacity: 1, scale: 1 }}
             className="absolute bottom-4 left-4 glass rounded-lg px-3 py-2 pointer-events-none border border-slate-700/60"
           >
-            <p className="text-xs font-mono text-indigo-300">
+            <p className="text-xs font-mono text-emerald-300">
               {hoveredNode.name}
             </p>
             <p className="text-xs text-slate-400 mt-0.5">

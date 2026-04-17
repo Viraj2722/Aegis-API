@@ -4,6 +4,13 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
+const navLinks = [
+  { label: "Features", href: "/#features" },
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Security", href: "/#security" },
+  { label: "Pricing", href: "/#pricing" },
+];
+
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -29,7 +36,7 @@ export default function Navbar() {
         }`}
       >
         <div className="flex items-center justify-between h-12">
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none">
               <path
                 d="M12 2L22 7V13C22 18 17.5 22.5 12 24C6.5 22.5 2 18 2 13V7L12 2Z"
@@ -49,17 +56,24 @@ export default function Navbar() {
             <span className="font-black text-lg text-white tracking-tight">
               Aegis<span className="gradient-text">API</span>
             </span>
-          </div>
+          </Link>
 
           <div className="hidden md:flex items-center gap-8 text-sm text-slate-400">
-            {["Features", "Dashboard", "Security", "Pricing"].map((item) => (
-              <span
-                key={item}
-                className="hover:text-cyan-400 cursor-pointer transition-colors duration-200 font-medium"
+            {navLinks.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="hover:text-cyan-400 transition-colors duration-200 font-medium"
               >
-                {item}
-              </span>
+                {item.label}
+              </Link>
             ))}
+            <Link
+              href="/agents"
+              className="hover:text-cyan-400 transition-colors duration-200 font-medium"
+            >
+              Agents
+            </Link>
           </div>
 
           <div className="hidden md:flex items-center gap-3">
@@ -119,17 +133,23 @@ export default function Navbar() {
               className="md:hidden overflow-hidden pb-4"
             >
               <div className="pt-4 border-t border-white/8 space-y-2">
-                {["Features", "Dashboard", "Security", "Pricing"].map(
-                  (item) => (
-                    <div
-                      key={item}
-                      className="text-slate-400 hover:text-white py-2 text-sm font-medium cursor-pointer transition-colors"
-                      onClick={() => setMobileOpen(false)}
-                    >
-                      {item}
-                    </div>
-                  ),
-                )}
+                {navLinks.map((item) => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className="block text-slate-400 hover:text-white py-2 text-sm font-medium transition-colors"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+                <Link
+                  href="/agents"
+                  className="block text-slate-400 hover:text-white py-2 text-sm font-medium transition-colors"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Agents
+                </Link>
                 <div className="pt-2 flex gap-3">
                   <Link
                     href="/login"

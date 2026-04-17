@@ -276,6 +276,7 @@ def _fallback_mitigation(payload: Dict[str, Any]) -> Dict[str, Any]:
     ]
 
     return {
+        "llm_source": "fallback",
         "summary": f"{endpoint} requires tighter access controls and runtime protections.",
         "why_flagged": [
             "High Error Rate" if error_rate >= 0.05 else "Anomalous behavior",
@@ -292,7 +293,9 @@ def _fallback_mitigation(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 def generate_groq_mitigation(context_payload: Dict[str, Any]) -> Dict[str, Any]:
     if not GROQ_API_KEY:
-        return _fallback_mitigation(context_payload.get("input", {}))
+        fallback = _fallback_mitigation(context_payload.get("input", {}))
+        fallback["llm_source"] = "fallback-no-key"
+        return fallback
 
     system_prompt = (
         "You are a senior cybersecurity expert specializing in API security, "
@@ -401,11 +404,19 @@ Impact:
             )
             result = _extract_json(content)
             if result:
+                result["llm_source"] = "groq-json"
                 return result
             sectioned = _extract_sectioned_assessment(content)
-            return sectioned if sectioned else _fallback_mitigation(context_payload.get("input", {}))
+            if sectioned:
+                sectioned["llm_source"] = "groq-sectioned"
+                return sectioned
+            fallback = _fallback_mitigation(context_payload.get("input", {}))
+            fallback["llm_source"] = "fallback-parse"
+            return fallback
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError):
-        return _fallback_mitigation(context_payload.get("input", {}))
+        fallback = _fallback_mitigation(context_payload.get("input", {}))
+        fallback["llm_source"] = "fallback-request"
+        return fallback
 
 
 @app.post("/api/upload")
@@ -611,6 +622,7 @@ async def generate_mitigation(
         }
 
         result = generate_groq_mitigation(context_payload)
+        llm_source = result.get("llm_source") or "generated"
         summary = result.get("summary") or "Mitigation guidance generated."
         mitigations = result.get("mitigations") or []
         mitigation_steps = result.get("mitigation_steps") or [
@@ -637,7 +649,7 @@ async def generate_mitigation(
 
         return {
             "endpoint": payload.endpoint,
-            "source": "generated",
+            "source": llm_source,
             "summary": summary,
             "mitigations": mitigations,
             "mitigation_steps": mitigation_steps,

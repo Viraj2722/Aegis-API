@@ -9,13 +9,13 @@ export default function FinalCTA() {
   const isInView = useInView(ref, { once: true, amount: 0.4 });
 
   return (
-    <section ref={ref} className="relative py-32 overflow-hidden">
+    <section ref={ref} id="pricing" className="relative py-32 overflow-hidden">
       <div className="absolute inset-0 cyber-grid opacity-30" />
       <div
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse at 50% 50%, rgba(0,212,255,0.08) 0%, rgba(124,58,237,0.06) 40%, transparent 70%)",
+            "radial-gradient(ellipse at 50% 50%, rgba(0,212,255,0.08) 0%, rgba(34,197,94,0.06) 40%, transparent 70%)",
         }}
       />
 
@@ -120,7 +120,7 @@ export default function FinalCTA() {
               <div className="flex -space-x-2">
                 {[
                   "bg-blue-500",
-                  "bg-purple-500",
+                  "bg-green-500",
                   "bg-cyan-500",
                   "bg-green-500",
                 ].map((c, i) => (

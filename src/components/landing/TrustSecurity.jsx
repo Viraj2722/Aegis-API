@@ -42,7 +42,7 @@ const badges = [
     ),
     title: "Zero Data Retention",
     desc: "Privacy-first",
-    color: "#7c3aed",
+    color: "#22c55e",
   },
   {
     icon: (
@@ -154,13 +154,13 @@ export default function TrustSecurity() {
   const isInView = useInView(ref, { once: true, amount: 0.2 });
 
   return (
-    <section ref={ref} className="relative py-24 overflow-hidden">
+    <section ref={ref} id="security" className="relative py-24 overflow-hidden">
       <div className="absolute inset-0 cyber-grid opacity-30" />
       <div
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse at 70% 50%, rgba(124,58,237,0.06) 0%, transparent 60%)",
+            "radial-gradient(ellipse at 70% 50%, rgba(34,197,94,0.06) 0%, transparent 60%)",
         }}
       />
 

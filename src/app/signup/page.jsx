@@ -56,7 +56,8 @@ const Rule = ({ met, label }) => (
 );
 
 export default function SignupPage() {
-  const { signup, loginWithGoogle, loading, error, setError, user, isReady } = useAuth();
+  const { signup, loginWithGoogle, loading, error, setError, user, isReady } =
+    useAuth();
   const router = useRouter();
   const [form, setForm] = useState({
     name: "",
@@ -103,8 +104,8 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-grid flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/3 left-1/4 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-green-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/3 left-1/4 w-80 h-80 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 24 }}
@@ -113,7 +114,7 @@ export default function SignupPage() {
         className="w-full max-w-md"
       >
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center glow-blue">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center glow-blue">
             <ShieldCheck size={20} className="text-white" />
           </div>
           <span className="text-2xl font-bold gradient-text">AegisAPI</span>
@@ -147,7 +148,7 @@ export default function SignupPage() {
                 onBlur={() => touch("name")}
                 placeholder="Jane Smith"
                 required
-                className="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all"
+                className="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 transition-all"
               />
             </div>
             <div>
@@ -161,7 +162,7 @@ export default function SignupPage() {
                 onBlur={() => touch("email")}
                 placeholder="you@company.com"
                 required
-                className="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all"
+                className="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 transition-all"
               />
             </div>
             <div>
@@ -176,7 +177,7 @@ export default function SignupPage() {
                   onBlur={() => touch("password")}
                   placeholder="........"
                   required
-                  className="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all pr-10"
+                  className="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 transition-all pr-10"
                 />
                 <button
                   type="button"
@@ -207,7 +208,7 @@ export default function SignupPage() {
                 onBlur={() => touch("confirm")}
                 placeholder="........"
                 required
-                className={`w-full bg-slate-900/60 border rounded-xl px-4 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none transition-all ${touched.confirm && !confirmValid ? "border-red-500/60 focus:border-red-500" : "border-slate-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30"}`}
+                className={`w-full bg-slate-900/60 border rounded-xl px-4 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none transition-all ${touched.confirm && !confirmValid ? "border-red-500/60 focus:border-red-500" : "border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"}`}
               />
               {touched.confirm && !confirmValid && (
                 <p className="text-red-400 text-xs mt-1">
@@ -219,7 +220,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading || !passwordValid || !confirmValid}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold py-2.5 rounded-xl transition-all glow-blue disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mt-2"
+              className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-semibold py-2.5 rounded-xl transition-all glow-blue disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mt-2"
             >
               {loading ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -247,7 +248,7 @@ export default function SignupPage() {
             Already have an account?{" "}
             <Link
               href="/login"
-              className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+              className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
             >
               Sign in
             </Link>

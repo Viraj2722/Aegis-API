@@ -253,7 +253,7 @@ export default function DashboardPage() {
               </h1>
               <p className="text-slate-400 text-sm mt-0.5">
                 Welcome back,{" "}
-                <span className="text-indigo-400 font-medium">
+                <span className="text-emerald-400 font-medium">
                   {user?.name}
                 </span>
                 {isDemo() && (
@@ -277,7 +277,7 @@ export default function DashboardPage() {
                   addToast("Refreshing analysis data...", "medium");
                 }}
                 disabled={loading}
-                className="flex items-center gap-1.5 px-3 py-2 glass rounded-lg text-sm text-slate-300 hover:text-white border border-slate-700/60 hover:border-indigo-500/40 transition-all"
+                className="flex items-center gap-1.5 px-3 py-2 glass rounded-lg text-sm text-slate-300 hover:text-white border border-slate-700/60 hover:border-emerald-500/40 transition-all"
               >
                 <RefreshCw
                   size={13}
@@ -288,7 +288,7 @@ export default function DashboardPage() {
               <button
                 onClick={handleUploadClick}
                 disabled={uploading}
-                className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm text-white font-medium transition-all glow-blue disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm text-white font-medium transition-all glow-blue disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Upload size={13} />
                 {uploading ? "Uploading..." : "Upload Logs"}
@@ -320,7 +320,7 @@ export default function DashboardPage() {
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${tab === t ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${tab === t ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-white"}`}
               >
                 {t === "table" ? "API Table" : "Graph View"}
               </button>
@@ -330,7 +330,7 @@ export default function DashboardPage() {
           {loading ? (
             <div className="glass rounded-xl border border-slate-800/60 p-8 flex items-center justify-center">
               <div className="flex flex-col items-center gap-3">
-                <div className="w-10 h-10 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+                <div className="w-10 h-10 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
                 <p className="text-slate-400 text-sm">Analyzing APIs...</p>
               </div>
             </div>

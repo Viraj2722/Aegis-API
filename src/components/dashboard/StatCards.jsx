@@ -45,9 +45,9 @@ const cards = [
     label: "Shadow APIs",
     icon: EyeOff,
     glow: "glow-purple",
-    textColor: "text-purple-400",
-    bg: "bg-purple-500/10",
-    border: "border-purple-500/20",
+    textColor: "text-green-400",
+    bg: "bg-green-500/10",
+    border: "border-green-500/20",
   },
 ];
 

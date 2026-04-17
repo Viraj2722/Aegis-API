@@ -18,7 +18,7 @@ export default function ApiDetailsPanel({ api, onClose }) {
     insights.push({ icon: <Server size={16} />, title: "Resource Exhaustion", text: "Performance anomaly: Response time is unusually high, potentially indicating DoS.", color: "text-yellow-400" });
   }
   if (api.is_shadow_api) {
-    insights.push({ icon: <Fingerprint size={16} />, title: "Shadow API Detected", text: "This endpoint shares an exact behavioral signature with another API, suggesting unauthorized duplication.", color: "text-purple-400" });
+    insights.push({ icon: <Fingerprint size={16} />, title: "Shadow API Detected", text: "This endpoint shares an exact behavioral signature with another API, suggesting unauthorized duplication.", color: "text-green-400" });
   }
   if (insights.length === 0) {
     insights.push({ icon: <Info size={16} />, title: "Baseline Normal", text: "Behavior matches expected network baseline patterns.", color: "text-emerald-400" });
@@ -61,7 +61,7 @@ export default function ApiDetailsPanel({ api, onClose }) {
           {/* Explainability Engine */}
           <div>
             <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Activity size={16} className="text-indigo-400"/> AI Engine Insights
+              <Activity size={16} className="text-emerald-400"/> AI Engine Insights
             </h3>
             <div className="space-y-3">
               {insights.map((insight, idx) => (
@@ -80,7 +80,7 @@ export default function ApiDetailsPanel({ api, onClose }) {
           {api.deviations && (
             <div>
               <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                <Crosshair size={16} className="text-indigo-400"/> Behavioral Deviations
+                <Crosshair size={16} className="text-emerald-400"/> Behavioral Deviations
               </h3>
               <div className="grid grid-cols-3 gap-2">
                 <DeviationStat label="Latency" val={api.deviations.latency_dev} />
@@ -89,7 +89,7 @@ export default function ApiDetailsPanel({ api, onClose }) {
               </div>
               <div className="mt-4 p-3 bg-slate-900/50 border border-slate-800 rounded-lg flex items-center justify-between">
                 <span className="text-xs text-slate-500 uppercase font-bold">Behavioral Signature</span>
-                <span className="text-xs font-mono text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded">{api.fingerprint}</span>
+                <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">{api.fingerprint}</span>
               </div>
             </div>
           )}

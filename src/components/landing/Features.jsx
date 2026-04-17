@@ -71,9 +71,9 @@ const features = [
     title: "Attack Surface Mapping",
     description:
       "Generate a complete, interactive map of every exposed endpoint across microservices, third-party integrations, and legacy systems.",
-    color: "#7c3aed",
-    accent: "rgba(124,58,237,0.12)",
-    border: "rgba(124,58,237,0.25)",
+    color: "#22c55e",
+    accent: "rgba(34,197,94,0.12)",
+    border: "rgba(34,197,94,0.25)",
     tag: "Visualization",
   },
   {
@@ -113,7 +113,7 @@ export default function Features() {
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse at 50% 0%, rgba(124,58,237,0.08) 0%, transparent 60%)",
+            "radial-gradient(ellipse at 50% 0%, rgba(34,197,94,0.08) 0%, transparent 60%)",
         }}
       />
 
@@ -124,10 +124,10 @@ export default function Features() {
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
         >
-          <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest text-purple-400/60 uppercase mb-4">
-            <div className="w-8 h-px bg-purple-400/30" />
+          <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest text-green-400/60 uppercase mb-4">
+            <div className="w-8 h-px bg-green-400/30" />
             Core Capabilities
-            <div className="w-8 h-px bg-purple-400/30" />
+            <div className="w-8 h-px bg-green-400/30" />
           </div>
           <h2 className="text-3xl md:text-5xl font-black text-white mb-4">
             Built for <span className="gradient-text">Modern Threat</span>{" "}
