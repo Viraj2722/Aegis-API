@@ -1,11 +1,25 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
 
 const AuthContext = createContext(null);
 const TOKEN_KEY = "aegis_token";
 const DEMO_TOKEN = "demo_token";
+const DEMO_USER = {
+  id: "demo-user",
+  name: "Demo User",
+  email: "demo@aegisapi.io",
+  avatar_url: null,
+};
+const DEMO_PROFILE = {
+  id: "demo-user",
+  full_name: "Demo User",
+  role: "Security Analyst",
+  country: "India",
+  avatar_url: null,
+  is_admin: false,
+};
 
 function mapSupabaseUser(rawUser) {
   if (!rawUser) return null;
@@ -22,6 +36,32 @@ function mapSupabaseUser(rawUser) {
   };
 }
 
+function isAdminFromUserClaims(rawUser) {
+  if (!rawUser) return false;
+  const appMeta = rawUser.app_metadata || {};
+  const userMeta = rawUser.user_metadata || {};
+
+  if (appMeta.admin === true) return true;
+  if (appMeta.is_admin === true) return true;
+  if (appMeta.claims?.admin === true) return true;
+  if (userMeta.admin === true) return true;
+  if (userMeta.is_admin === true) return true;
+
+  return false;
+}
+
+function mapProfileRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    full_name: row.full_name || "",
+    role: row.role || "",
+    country: row.country || "",
+    avatar_url: row.avatar_url || null,
+    is_admin: !!row.is_admin,
+  };
+}
+
 async function upsertProfile(user) {
   if (!user) return;
   const metadata = user.user_metadata || {};
@@ -30,8 +70,6 @@ async function upsertProfile(user) {
     id: user.id,
     full_name:
       metadata.full_name || metadata.name || user.email?.split("@")[0] || null,
-    company_name: metadata.company_name || null,
-    role: metadata.role || null,
     avatar_url: metadata.avatar_url || null,
   };
 
@@ -40,24 +78,54 @@ async function upsertProfile(user) {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [isAdminClaim, setIsAdminClaim] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isReady, setIsReady] = useState(false);
+  const isAdmin =
+    isAdminClaim ||
+    !!profile?.is_admin ||
+    String(user?.email || "").toLowerCase().startsWith("admin@");
 
   useEffect(() => {
     let mounted = true;
 
     const initSession = async () => {
+      const demoToken =
+        typeof window !== "undefined"
+          ? localStorage.getItem(TOKEN_KEY) === DEMO_TOKEN
+          : false;
+      if (demoToken) {
+        setUser(DEMO_USER);
+        setProfile(DEMO_PROFILE);
+        setIsDemoMode(true);
+        setIsAdminClaim(false);
+        setIsReady(true);
+        return;
+      }
+
       const { data } = await supabase.auth.getSession();
       if (!mounted) return;
 
       const mappedUser = mapSupabaseUser(data.session?.user);
       setUser(mappedUser);
+      setIsDemoMode(false);
+      setIsAdminClaim(isAdminFromUserClaims(data.session?.user));
       if (mappedUser) {
         localStorage.removeItem(TOKEN_KEY);
         upsertProfile(data.session.user).catch(() => {
           // Profile write can fail if RLS policies are not configured yet.
         });
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("id, full_name, role, country, avatar_url, is_admin")
+          .eq("id", data.session.user.id)
+          .single();
+        setProfile(mapProfileRow(profileData));
+      } else {
+        setProfile(null);
       }
       setIsReady(true);
     };
@@ -67,14 +135,43 @@ export function AuthProvider({ children }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      const demoToken =
+        typeof window !== "undefined"
+          ? localStorage.getItem(TOKEN_KEY) === DEMO_TOKEN
+          : false;
+
       const mappedUser = mapSupabaseUser(session?.user);
       setUser(mappedUser);
+      setIsAdminClaim(isAdminFromUserClaims(session?.user));
 
       if (mappedUser) {
+        setIsDemoMode(false);
         localStorage.removeItem(TOKEN_KEY);
         upsertProfile(session.user).catch(() => {
           // Profile write can fail if RLS policies are not configured yet.
         });
+        supabase
+          .from("profiles")
+          .select("id, full_name, role, country, avatar_url, is_admin")
+          .eq("id", session.user.id)
+          .single()
+          .then(({ data: profileData }) => {
+            setProfile(mapProfileRow(profileData));
+          })
+          .catch(() => {
+            setProfile(null);
+          });
+      } else {
+        if (demoToken) {
+          setUser(DEMO_USER);
+          setProfile(DEMO_PROFILE);
+          setIsAdminClaim(false);
+          setIsDemoMode(true);
+        } else {
+          setProfile(null);
+          setIsAdminClaim(false);
+          setIsDemoMode(false);
+        }
       }
 
       if (!isReady) {
@@ -87,6 +184,61 @@ export function AuthProvider({ children }) {
       subscription.unsubscribe();
     };
   }, []);
+
+  const refreshProfile = useCallback(async () => {
+    if (isDemoMode) {
+      return profile || DEMO_PROFILE;
+    }
+    if (!user?.id) return null;
+    const { data, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, full_name, role, country, avatar_url, is_admin")
+      .eq("id", user.id)
+      .single();
+    if (profileError) return null;
+    const mapped = mapProfileRow(data);
+    setProfile(mapped);
+    return mapped;
+  }, [isDemoMode, profile, user?.id]);
+
+  const updateProfile = useCallback(async (patch) => {
+    if (isDemoMode) {
+      const updated = {
+        ...(profile || DEMO_PROFILE),
+        full_name: patch?.full_name ?? profile?.full_name ?? DEMO_PROFILE.full_name,
+        role: patch?.role ?? profile?.role ?? DEMO_PROFILE.role,
+        country: patch?.country ?? profile?.country ?? DEMO_PROFILE.country,
+        avatar_url: patch?.avatar_url ?? profile?.avatar_url ?? null,
+      };
+      setProfile(updated);
+      setUser((prev) => ({
+        ...(prev || DEMO_USER),
+        name: updated.full_name || (prev?.name ?? DEMO_USER.name),
+      }));
+      return { ok: true };
+    }
+
+    if (!user?.id) return { ok: false, error: "Not authenticated" };
+    const payload = {
+      id: user.id,
+      full_name: patch?.full_name ?? user.name ?? null,
+      role: patch?.role ?? null,
+      country: patch?.country ?? null,
+      avatar_url: patch?.avatar_url ?? null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: upsertErr } = await supabase
+      .from("profiles")
+      .upsert(payload, { onConflict: "id" });
+
+    if (upsertErr) {
+      return { ok: false, error: upsertErr.message || "Profile update failed" };
+    }
+
+    await refreshProfile();
+    return { ok: true };
+  }, [isDemoMode, profile, refreshProfile, user?.id, user?.name]);
 
   const login = async (email, password) => {
     setLoading(true);
@@ -164,9 +316,10 @@ export function AuthProvider({ children }) {
   };
 
   const loginDemo = () => {
-    const demoUser = { id: 0, name: "Demo User", email: "demo@aegisapi.io" };
     localStorage.setItem(TOKEN_KEY, DEMO_TOKEN);
-    setUser(demoUser);
+    setUser(DEMO_USER);
+    setProfile(DEMO_PROFILE);
+    setIsDemoMode(true);
   };
 
   const loginWithGoogle = async () => {
@@ -194,14 +347,39 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
+    if (!isDemoMode) {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (token) {
+          await fetch("/api/reset-data", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        }
+      } catch {
+        // Keep logout resilient even if cleanup call fails.
+      }
+    }
+
     localStorage.removeItem(TOKEN_KEY);
     await supabase.auth.signOut();
     setUser(null);
+    setProfile(null);
+    setIsAdminClaim(false);
+    setIsDemoMode(false);
   };
 
   const value = useMemo(
     () => ({
       user,
+      profile,
+      isDemoMode,
+      isAdmin,
       loading,
       error,
       setError,
@@ -210,9 +388,22 @@ export function AuthProvider({ children }) {
       signup,
       loginWithGoogle,
       loginDemo,
+      refreshProfile,
+      updateProfile,
       logout,
     }),
-    [user, loading, error, isReady],
+    [
+      user,
+      profile,
+      isDemoMode,
+      isAdmin,
+      isAdminClaim,
+      loading,
+      error,
+      isReady,
+      refreshProfile,
+      updateProfile,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

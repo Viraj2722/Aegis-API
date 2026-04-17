@@ -8,6 +8,7 @@ import {
   Bell,
   LogOut,
   User,
+  LayoutDashboard,
   ChevronDown,
   Activity,
   Bot,
@@ -16,16 +17,22 @@ import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "next/navigation";
 
 export default function Navbar({ alerts = [], lastUpdated }) {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const router = useRouter();
   const [showUser, setShowUser] = useState(false);
   const [showAlerts, setShowAlerts] = useState(false);
 
   const unread = alerts.filter((a) => !a.read).length;
 
+<<<<<<< HEAD
   const handleLogout = () => {
     logout();
     router.replace("/");
+=======
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/login");
+>>>>>>> 95799056cfaccdfc7304f7f727e5cb45baf956ac
   };
 
   return (
@@ -159,6 +166,28 @@ export default function Navbar({ alerts = [], lastUpdated }) {
                     {user?.email}
                   </p>
                 </div>
+                <button
+                  onClick={() => {
+                    setShowUser(false);
+                    router.push("/profile");
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-slate-300 hover:bg-slate-700/40 transition-colors text-sm"
+                >
+                  <User size={14} />
+                  Profile
+                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      setShowUser(false);
+                      router.push("/admin");
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-slate-300 hover:bg-slate-700/40 transition-colors text-sm"
+                  >
+                    <LayoutDashboard size={14} />
+                    Admin Dashboard
+                  </button>
+                )}
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2 px-4 py-3 text-red-400 hover:bg-red-500/10 transition-colors text-sm"

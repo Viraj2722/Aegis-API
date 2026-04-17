@@ -571,6 +571,7 @@ def health_check():
     return {"status": "healthy", "service": "AegisAPI Backend"}
 
 
+<<<<<<< HEAD
 @app.post("/api/mitigations/generate")
 async def generate_mitigation(
     payload: MitigationRequest,
@@ -663,3 +664,97 @@ async def generate_mitigation(
     except Exception as e:
         print(f"Mitigation generation error: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to generate mitigation")
+=======
+@app.post("/api/reset-data")
+async def reset_user_data(user_id: str = Depends(get_user_id)):
+    """Clear current user's analysis artifacts so next login starts fresh."""
+    try:
+        SupabaseOps.clear_user_data(user_id)
+        return {"message": "User data cleared"}
+    except Exception as e:
+        print(f"Reset data error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/admin/stats")
+async def admin_global_stats():
+    """
+    Fetch global statistics across all users and uploads.
+    Returns: total users, total active agents, online agents, regions covered
+    """
+    try:
+        stats = SupabaseOps.get_admin_global_stats()
+        return stats
+    except Exception as e:
+        print(f"Admin stats error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/admin/risk-distribution")
+async def admin_risk_distribution():
+    """
+    Fetch global risk distribution across all analyzed APIs.
+    Returns: counts by risk level (Critical, High, Medium, Low)
+    """
+    try:
+        distribution = SupabaseOps.get_admin_risk_distribution()
+        return distribution
+    except Exception as e:
+        print(f"Admin risk distribution error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/admin/api-categories")
+async def admin_api_categories():
+    """
+    Fetch API analysis grouped by category and suspicious/zombie status.
+    Returns: categories with suspicious and zombie API counts
+    """
+    try:
+        categories = SupabaseOps.get_admin_api_categories()
+        return categories
+    except Exception as e:
+        print(f"Admin API categories error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/admin/system-health")
+async def admin_system_health():
+    """
+    Fetch system health metrics: total logs analyzed, average latency
+    """
+    try:
+        health = SupabaseOps.get_admin_system_health()
+        return health
+    except Exception as e:
+        print(f"Admin system health error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/admin/heatmap")
+async def admin_heatmap():
+    """
+    Fetch regional risk matrix data based on user locations and API risks.
+    Returns: matrix of risk levels by region
+    """
+    try:
+        heatmap = SupabaseOps.get_admin_heatmap_data()
+        return heatmap
+    except Exception as e:
+        print(f"Admin heatmap error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/admin/user-distribution")
+async def admin_user_distribution():
+    """
+    Fetch real user distribution by role/profession.
+    Returns: users grouped by their roles from profiles table
+    """
+    try:
+        distribution = SupabaseOps.get_admin_user_distribution()
+        return distribution
+    except Exception as e:
+        print(f"Admin user distribution error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+>>>>>>> 95799056cfaccdfc7304f7f727e5cb45baf956ac

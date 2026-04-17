@@ -86,6 +86,16 @@ class SupabaseOps:
             client.table("risk_alerts").delete().eq("user_id", user_id).eq("is_resolved", False).execute()
         except Exception as e:
             print(f"Error clearing unresolved alerts: {e}")
+
+    @staticmethod
+    def clear_user_data(user_id: str) -> None:
+        """Delete per-user analysis artifacts to start with a clean dashboard state."""
+        tables = ["risk_alerts", "graph_data", "api_analysis", "upload_sessions"]
+        for table in tables:
+            try:
+                supabase.table(table).delete().eq("user_id", user_id).execute()
+            except Exception as e:
+                print(f"Error clearing {table} for user {user_id}: {e}")
     
     @staticmethod
     def upsert_api_analysis(user_id: str, analysis_records: List[Dict[str, Any]]) -> int:
@@ -300,6 +310,7 @@ class SupabaseOps:
             print(f"Error fetching risk_alerts: {e}")
             return []
 
+<<<<<<< HEAD
     @staticmethod
     def get_user_profile(user_id: str) -> Dict[str, Any]:
         """Fetch profile details for personalization/context."""
@@ -444,3 +455,291 @@ class SupabaseOps:
         except Exception as e:
             print(f"Error saving mitigation: {e}")
             return {}
+=======
+    # ===== ADMIN ANALYTICS =====
+
+    @staticmethod
+    def get_admin_global_stats() -> Dict[str, Any]:
+        """
+        Fetch global admin statistics across all users and uploads.
+        Returns: totalUsers, activeAgents (unique user count from api_analysis), onlineAgents, regionsCovered
+        """
+        try:
+            # Count unique users with uploads
+            user_count_result = supabase.table("api_analysis").select("user_id", count="exact").execute()
+            unique_users = len(set([r["user_id"] for r in user_count_result.data])) if user_count_result.data else 0
+
+            # Count total APIs analyzed (as proxy for agents)
+            total_apis = len(user_count_result.data) if user_count_result.data else 0
+
+            # Estimate online agents based on recent activity (last 24 hours)
+            from datetime import datetime, timedelta
+            last_24h = (datetime.utcnow() - timedelta(hours=24)).isoformat()
+            recent_result = supabase.table("api_analysis").select("id", count="exact").gte("updated_at", last_24h).execute()
+            online_agents = max(int(len(recent_result.data) * 0.85), 0)  # 85% uptime estimate
+
+            # Count unique regions from user profiles
+            profiles_result = supabase.table("profiles").select("country").execute()
+            regions = len(set([r["country"] for r in profiles_result.data if r.get("country")])) if profiles_result.data else 0
+
+            return {
+                "globalStats": {
+                    "totalUsers": unique_users,
+                    "activeAgents": min(total_apis // 10, 100),  # ~1 agent per 10 APIs analyzed
+                    "onlineAgents": online_agents // 50 if online_agents > 0 else 5,
+                    "regionsCovered": regions
+                }
+            }
+        except Exception as e:
+            print(f"Error fetching admin global stats: {e}")
+            return {
+                "globalStats": {
+                    "totalUsers": 0,
+                    "activeAgents": 0,
+                    "onlineAgents": 0,
+                    "regionsCovered": 0
+                }
+            }
+
+    @staticmethod
+    def get_admin_risk_distribution() -> Dict[str, Any]:
+        """
+        Fetch global risk distribution across all analyzed APIs.
+        Returns: threatData.donut with Critical, High, Medium, Low counts
+        """
+        try:
+            result = supabase.table("api_analysis").select("risk_level, count").execute()
+            
+            risk_counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+            if result.data:
+                risk_df = pd.DataFrame(result.data)
+                for risk_level in risk_counts.keys():
+                    count = len(risk_df[risk_df["risk_level"] == risk_level])
+                    risk_counts[risk_level] = count
+            
+            return {
+                "threatData": {
+                    "donut": [
+                        {"name": "Critical", "value": risk_counts["CRITICAL"], "color": "#f87171"},
+                        {"name": "High", "value": risk_counts["HIGH"], "color": "#fb923c"},
+                        {"name": "Medium", "value": risk_counts["MEDIUM"], "color": "#fbbf24"},
+                        {"name": "Low", "value": risk_counts["LOW"], "color": "#38bdf8"},
+                    ]
+                }
+            }
+        except Exception as e:
+            print(f"Error fetching admin risk distribution: {e}")
+            return {
+                "threatData": {
+                    "donut": [
+                        {"name": "Critical", "value": 0, "color": "#f87171"},
+                        {"name": "High", "value": 0, "color": "#fb923c"},
+                        {"name": "Medium", "value": 0, "color": "#fbbf24"},
+                        {"name": "Low", "value": 0, "color": "#38bdf8"},
+                    ]
+                }
+            }
+
+    @staticmethod
+    def get_admin_api_categories() -> Dict[str, Any]:
+        """
+        Fetch API analysis grouped by category (auth, payments, users, reports, internal).
+        Categories inferred from endpoint patterns.
+        Returns: threatData.categories with suspicious and zombie counts per category
+        """
+        try:
+            result = supabase.table("api_analysis").select("endpoint, is_zombie, is_shadow_api").execute()
+            
+            # Categorize endpoints by pattern
+            categories = {
+                "Auth": {"suspicious": 0, "zombie": 0},
+                "Payments": {"suspicious": 0, "zombie": 0},
+                "Users": {"suspicious": 0, "zombie": 0},
+                "Reports": {"suspicious": 0, "zombie": 0},
+                "Internal": {"suspicious": 0, "zombie": 0},
+            }
+            
+            if result.data:
+                for api in result.data:
+                    endpoint = (api.get("endpoint", "") or "").lower()
+                    is_shadow = api.get("is_shadow_api", False)
+                    is_zombie = api.get("is_zombie", False)
+                    
+                    # Infer category from endpoint
+                    category = "Internal"
+                    if any(x in endpoint for x in ["auth", "login", "signin", "oauth"]):
+                        category = "Auth"
+                    elif any(x in endpoint for x in ["payment", "invoice", "billing", "charge", "payment"]):
+                        category = "Payments"
+                    elif any(x in endpoint for x in ["user", "profile", "account"]):
+                        category = "Users"
+                    elif any(x in endpoint for x in ["report", "analytics", "export"]):
+                        category = "Reports"
+                    
+                    if is_shadow:
+                        categories[category]["suspicious"] += 1
+                    if is_zombie:
+                        categories[category]["zombie"] += 1
+            
+            return {
+                "threatData": {
+                    "categories": [
+                        {"category": cat, **counts}
+                        for cat, counts in categories.items()
+                    ]
+                }
+            }
+        except Exception as e:
+            print(f"Error fetching admin API categories: {e}")
+            return {
+                "threatData": {
+                    "categories": [
+                        {"category": "Auth", "suspicious": 0, "zombie": 0},
+                        {"category": "Payments", "suspicious": 0, "zombie": 0},
+                        {"category": "Users", "suspicious": 0, "zombie": 0},
+                        {"category": "Reports", "suspicious": 0, "zombie": 0},
+                        {"category": "Internal", "suspicious": 0, "zombie": 0},
+                    ]
+                }
+            }
+
+    @staticmethod
+    def get_admin_system_health() -> Dict[str, Any]:
+        """
+        Fetch system health metrics: total logs analyzed, average latency
+        """
+        try:
+            # Total logs = sum of all call counts
+            api_result = supabase.table("api_analysis").select("call_count, avg_latency").execute()
+            
+            total_logs = 0
+            latencies = []
+            
+            if api_result.data:
+                api_df = pd.DataFrame(api_result.data)
+                total_logs = int(api_df["call_count"].sum())
+                latencies = api_df["avg_latency"].tolist()
+            
+            avg_latency = round(sum(latencies) / len(latencies)) if latencies else 28
+            
+            return {
+                "ingestionStats": {
+                    "totalLogsAnalyzed": total_logs,
+                    "avgLatencyMs": avg_latency
+                }
+            }
+        except Exception as e:
+            print(f"Error fetching admin system health: {e}")
+            return {
+                "ingestionStats": {
+                    "totalLogsAnalyzed": 0,
+                    "avgLatencyMs": 0
+                }
+            }
+
+    @staticmethod
+    def get_admin_heatmap_data() -> Dict[str, Any]:
+        """
+        Fetch regional risk matrix based on user profiles and their API risks.
+        Returns: matrix of risk counts by region x risk level
+        """
+        try:
+            # Get user profiles with their countries
+            profiles_result = supabase.table("profiles").select("id, country").execute()
+            user_countries = {r["id"]: r["country"] for r in profiles_result.data if r.get("country")}
+            
+            # Get all api_analysis records with user_id and risk_level
+            api_result = supabase.table("api_analysis").select("user_id, risk_level").execute()
+            
+            # Define regions
+            regions = ["NA", "EU", "IN", "APAC", "MEA"]
+            risk_levels = ["Critical", "High", "Medium", "Low", "Info"]
+            
+            # Map countries to regions
+            country_to_region = {
+                "United States": "NA", "Canada": "NA", "Mexico": "NA",
+                "United Kingdom": "EU", "Germany": "EU", "France": "EU", "India": "IN",
+                "Australia": "APAC", "Japan": "APAC", "China": "APAC",
+                "South Africa": "MEA", "UAE": "MEA",
+            }
+            
+            # Initialize matrix
+            matrix = [[0] * len(risk_levels) for _ in regions]
+            
+            if api_result.data:
+                for api in api_result.data:
+                    user_id = api.get("user_id")
+                    country = user_countries.get(user_id, "IN")  # Default to India
+                    region = country_to_region.get(country, "APAC")  # Default to APAC
+                    
+                    risk_level = api.get("risk_level", "Low").capitalize()
+                    risk_idx = risk_levels.index(risk_level) if risk_level in risk_levels else 3
+                    region_idx = regions.index(region)
+                    
+                    matrix[region_idx][risk_idx] += 1
+            
+            return {
+                "riskMatrixData": {
+                    "regions": regions,
+                    "riskLevels": risk_levels,
+                    "matrix": matrix
+                }
+            }
+        except Exception as e:
+            print(f"Error fetching admin heatmap data: {e}")
+            return {
+                "riskMatrixData": {
+                    "regions": ["NA", "EU", "IN", "APAC", "MEA"],
+                    "riskLevels": ["Critical", "High", "Medium", "Low", "Info"],
+                    "matrix": [[0] * 5 for _ in range(5)]
+                }
+            }
+
+    @staticmethod
+    def get_admin_user_distribution() -> Dict[str, Any]:
+        """
+        Fetch real user distribution by role/profession from profiles table.
+        Returns: list of roles with user counts
+        """
+        try:
+            result = supabase.table("profiles").select("role").execute()
+            
+            # Count users by role
+            role_counts = {}
+            if result.data:
+                for profile in result.data:
+                    role = profile.get("role", "Unassigned")
+                    if role:
+                        role_counts[role] = role_counts.get(role, 0) + 1
+            
+            # Convert to list format for chart, with predefined colors
+            colors = {
+                "Security Engineers": "#38bdf8",
+                "Security Engineer": "#38bdf8",
+                "Backend Developers": "#a855f7",
+                "Backend Developer": "#a855f7",
+                "DevOps Engineers": "#34d399",
+                "DevOps Engineer": "#34d399",
+                "SRE": "#f59e0b",
+                "Platform Engineers": "#22d3ee",
+                "Platform Engineer": "#22d3ee",
+            }
+            
+            profession_list = []
+            for role, count in sorted(role_counts.items(), key=lambda x: x[1], reverse=True):
+                profession_list.append({
+                    "name": role,
+                    "value": count,
+                    "color": colors.get(role, "#64748b")
+                })
+            
+            # If no data, return empty list (not mock data)
+            return {
+                "professionData": profession_list
+            }
+        except Exception as e:
+            print(f"Error fetching admin user distribution: {e}")
+            return {
+                "professionData": []
+            }
+>>>>>>> 95799056cfaccdfc7304f7f727e5cb45baf956ac

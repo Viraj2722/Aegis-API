@@ -16,13 +16,18 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.103.3",
     "axios": "^1.15.0",
+    "d3-force": "^3.0.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",
     "next": "^15.1.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "reactflow": "^11.11.4",
+<<<<<<< HEAD
     "simplex-noise": "^4.0.3"
+=======
+    "recharts": "^3.8.1"
+>>>>>>> 95799056cfaccdfc7304f7f727e5cb45baf956ac
   },
   "devDependencies": {
     "autoprefixer": "^10.4.27",

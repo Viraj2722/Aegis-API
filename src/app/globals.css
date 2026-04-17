@@ -36,6 +36,18 @@
 }
 
 @layer utilities {
+    .glass-card {
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(99, 102, 241, 0.15);
+        border-radius: 1rem;
+    }
+
+    .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
     .glass {
         background: rgba(15, 23, 42, 0.7);
         backdrop-filter: blur(16px);
@@ -142,7 +154,7 @@
         animation: scanLine 3s linear infinite;
     }
 
-    canvas {
+    .decorative-canvas {
         position: absolute;
         top: 0;
         left: 0;
