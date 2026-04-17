@@ -1,4 +1,5 @@
 import "./globals.css";
+import Providers from "./providers";
 
 export const metadata = {
   title: "AegisAPI Dashboard",
@@ -9,7 +10,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <div id="root">{children}</div>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
