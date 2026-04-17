@@ -154,7 +154,7 @@
         animation: scanLine 3s linear infinite;
     }
 
-    canvas {
+    .decorative-canvas {
         position: absolute;
         top: 0;
         left: 0;

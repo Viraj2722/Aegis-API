@@ -11,6 +11,7 @@ import StatCards from "../../components/dashboard/StatCards";
 import ApiTable from "../../components/dashboard/ApiTable";
 import ApiDetailPanel from "../../components/dashboard/ApiDetailPanel";
 import ApiGraph from "../../components/dashboard/ApiGraph";
+import AttackSimulationGraph from "../../components/dashboard/AttackSimulationGraph";
 import AlertBanner from "../../components/dashboard/AlertBanner";
 import { Toast, useToasts } from "../../components/dashboard/Toast";
 import { useAuth } from "../../context/AuthContext";
@@ -111,6 +112,73 @@ function mapLinksForGraph(rawEdges) {
           : "connection",
       label: e.data?.is_kill_chain ? "Risk path" : undefined,
     }));
+}
+
+function statusToRiskLevel(status) {
+  if (status === "Critical") return "CRITICAL";
+  if (status === "Suspicious") return "HIGH";
+  if (status === "Zombie") return "MEDIUM";
+  return "LOW";
+}
+
+function classifyTrafficPattern(calls = 0, responseTime = 0) {
+  if (calls >= 120 || responseTime >= 900) return "BURST";
+  if (calls >= 40) return "STEADY";
+  return "LOW";
+}
+
+function buildSimulationData(rawApis, rawEdges) {
+  const apis = (rawApis || []).map((row) => {
+    const apiName = row.endpoint || row.api || "unknown";
+    const status = row.status || buildStatus(row);
+    const calls = Number(row.call_count ?? row.calls ?? 0);
+    const responseTime = Number(row.avg_response_time ?? row.response_time ?? 0);
+    return {
+      api: apiName,
+      risk_level: String(row.risk_level || statusToRiskLevel(status)).toUpperCase(),
+      error_rate: Number(row.error_rate ?? 0),
+      anomaly:
+        row.anomaly === -1 || row.anomaly === 1
+          ? row.anomaly
+          : status === "Critical" || status === "Suspicious"
+            ? -1
+            : 1,
+      traffic_pattern: row.traffic_pattern || classifyTrafficPattern(calls, responseTime),
+      risk_score: Number((row.risk_score ?? 0) / (row.risk_score > 1 ? 100 : 1)),
+    };
+  });
+
+  const edges = (rawEdges || [])
+    .map((e) => ({ source: e.source, target: e.target }))
+    .filter((e) => e.source && e.target && e.source !== "gateway" && e.target !== "gateway");
+
+  if (edges.length > 0) {
+    return { apis, edges };
+  }
+
+  // Fallback chain from highest risk to keep simulation meaningful when no graph edges exist.
+  const riskWeight = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+  const sorted = [...apis].sort(
+    (a, b) =>
+      (riskWeight[b.risk_level] || 0) - (riskWeight[a.risk_level] || 0) ||
+      (b.risk_score || 0) - (a.risk_score || 0),
+  );
+
+  const inferredEdges = sorted
+    .map((a, idx) =>
+      idx < sorted.length - 1
+        ? {
+            source: a.api,
+            target: sorted[idx + 1].api,
+          }
+        : null,
+    )
+    .filter(Boolean);
+
+  return {
+    apis,
+    edges: inferredEdges,
+  };
 }
 
 function buildDemoDashboardFromLogs(logRows) {
@@ -248,6 +316,7 @@ export default function DashboardPage() {
   const [apis, setApis] = useState([]);
   const [stats, setStats] = useState(null);
   const [graphData, setGraphData] = useState(null);
+  const [simulationData, setSimulationData] = useState({ apis: [], edges: [] });
   const [alerts, setAlerts] = useState([]);
   const [selectedApi, setSelectedApi] = useState(null);
   const [clusterMode, setClusterMode] = useState(false);
@@ -267,6 +336,20 @@ export default function DashboardPage() {
       setApis(demoData.apis);
       setStats(demoData.stats);
       setGraphData(demoData.graphData);
+      setSimulationData(
+        buildSimulationData(
+          demoData.apis.map((a) => ({
+            endpoint: a.endpoint,
+            risk_level: statusToRiskLevel(a.status),
+            error_rate: (a.error_rate || 0) / 100,
+            call_count: a.calls,
+            avg_response_time: a.response_time,
+            risk_score: a.risk_score,
+            status: a.status,
+          })),
+          demoData.graphData.links,
+        ),
+      );
       setAlerts(demoData.alerts);
       updateLastUpdated();
       setLoading(false);
@@ -287,6 +370,7 @@ export default function DashboardPage() {
       setApis(transformed.apis);
       setStats(transformed.stats);
       setGraphData(transformed.graphData);
+      setSimulationData(buildSimulationData(analysisRes.data?.api_data || [], graphRes.data?.edges || []));
       setAlerts(formatAlerts(alertsRes.data?.alerts));
       updateLastUpdated();
     } catch (error) {
@@ -299,6 +383,7 @@ export default function DashboardPage() {
         shadow_apis: 0,
       });
       setGraphData({ nodes: [], links: [] });
+      setSimulationData({ apis: [], edges: [] });
       setAlerts([]);
       updateLastUpdated();
       const msg =
@@ -361,6 +446,20 @@ export default function DashboardPage() {
         setApis(demoData.apis);
         setStats(demoData.stats);
         setGraphData(demoData.graphData);
+        setSimulationData(
+          buildSimulationData(
+            demoData.apis.map((a) => ({
+              endpoint: a.endpoint,
+              risk_level: statusToRiskLevel(a.status),
+              error_rate: (a.error_rate || 0) / 100,
+              call_count: a.calls,
+              avg_response_time: a.response_time,
+              risk_score: a.risk_score,
+              status: a.status,
+            })),
+            demoData.graphData.links,
+          ),
+        );
         setAlerts(demoData.alerts);
         addToast(
           `Demo mode: loaded ${parsed.length} log records into dashboard`,
@@ -474,13 +573,13 @@ export default function DashboardPage() {
           )}
 
           <div className="flex items-center gap-1 p-1 glass rounded-xl border border-slate-800/60 w-fit">
-            {["table", "graph"].map((t) => (
+            {["table", "graph", "attack"].map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${tab === t ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}
               >
-                {t === "table" ? "API Table" : "Graph View"}
+                {t === "table" ? "API Table" : t === "graph" ? "Graph View" : "Attack Simulation"}
               </button>
             ))}
           </div>
@@ -500,7 +599,7 @@ export default function DashboardPage() {
                 selected={selectedApi}
               />
             </motion.div>
-          ) : (
+          ) : tab === "graph" ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               {graphData && (
                 <ApiGraph
@@ -509,6 +608,10 @@ export default function DashboardPage() {
                   onToggleCluster={() => setClusterMode((c) => !c)}
                 />
               )}
+            </motion.div>
+          ) : (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <AttackSimulationGraph simulationData={simulationData} />
             </motion.div>
           )}
 
