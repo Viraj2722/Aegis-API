@@ -309,8 +309,6 @@ class SupabaseOps:
         except Exception as e:
             print(f"Error fetching risk_alerts: {e}")
             return []
-
-<<<<<<< HEAD
     @staticmethod
     def get_user_profile(user_id: str) -> Dict[str, Any]:
         """Fetch profile details for personalization/context."""
@@ -455,7 +453,7 @@ class SupabaseOps:
         except Exception as e:
             print(f"Error saving mitigation: {e}")
             return {}
-=======
+
     # ===== ADMIN ANALYTICS =====
 
     @staticmethod
@@ -742,4 +740,3 @@ class SupabaseOps:
             return {
                 "professionData": []
             }
->>>>>>> 95799056cfaccdfc7304f7f727e5cb45baf956ac

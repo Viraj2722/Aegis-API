@@ -23,11 +23,8 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "reactflow": "^11.11.4",
-<<<<<<< HEAD
-    "simplex-noise": "^4.0.3"
-=======
+    "simplex-noise": "^4.0.3",
     "recharts": "^3.8.1"
->>>>>>> 95799056cfaccdfc7304f7f727e5cb45baf956ac
   },
   "devDependencies": {
     "autoprefixer": "^10.4.27",

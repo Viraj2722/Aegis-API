@@ -66,7 +66,9 @@ function inferLinks(nodes, existingLinks) {
     }
   });
 
-  const highestRisk = [...nodes].sort((a, b) => (b.risk || 0) - (a.risk || 0))[0];
+  const highestRisk = [...nodes].sort(
+    (a, b) => (b.risk || 0) - (a.risk || 0),
+  )[0];
 
   const pushLink = (source, target, type = "inferred") => {
     if (!source || !target || source === target) return;
@@ -113,7 +115,9 @@ function inferLinks(nodes, existingLinks) {
     pushLink(byRisk[i].id, byRisk[i + 1].id, "inferred");
   }
 
-  return links.filter((l) => nodeIds.has(toId(l.source)) && nodeIds.has(toId(l.target)));
+  return links.filter(
+    (l) => nodeIds.has(toId(l.source)) && nodeIds.has(toId(l.target)),
+  );
 }
 
 export default function ApiGraph({ graphData, clusterMode, onToggleCluster }) {
@@ -163,7 +167,14 @@ export default function ApiGraph({ graphData, clusterMode, onToggleCluster }) {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, width, height);
 
-    const glow = ctx.createRadialGradient(width * 0.35, height * 0.3, 20, width * 0.35, height * 0.3, width * 0.7);
+    const glow = ctx.createRadialGradient(
+      width * 0.35,
+      height * 0.3,
+      20,
+      width * 0.35,
+      height * 0.3,
+      width * 0.7,
+    );
     glow.addColorStop(0, "rgba(56,189,248,0.14)");
     glow.addColorStop(0.5, "rgba(99,102,241,0.08)");
     glow.addColorStop(1, "rgba(0,0,0,0)");
@@ -214,7 +225,10 @@ export default function ApiGraph({ graphData, clusterMode, onToggleCluster }) {
         return groupKeys.flatMap((status) => {
           const items = groups[status];
           const columnX = clusterColumns[status];
-          const spread = Math.min(160, Math.max(90, (height - 120) / Math.max(1, items.length + 1)));
+          const spread = Math.min(
+            160,
+            Math.max(90, (height - 120) / Math.max(1, items.length + 1)),
+          );
           return items.map((node, index) => {
             const offsetY = (index - (items.length - 1) / 2) * spread;
             return {
@@ -232,7 +246,8 @@ export default function ApiGraph({ graphData, clusterMode, onToggleCluster }) {
       const radiusY = Math.max(95, Math.min(165, height * 0.22));
 
       return nodes.map((node, index) => {
-        const angle = (index / Math.max(1, nodes.length)) * Math.PI * 2 - Math.PI / 2;
+        const angle =
+          (index / Math.max(1, nodes.length)) * Math.PI * 2 - Math.PI / 2;
         return {
           ...node,
           x: clamp(centerX + Math.cos(angle) * radiusX, 48, width - 48),
@@ -249,7 +264,8 @@ export default function ApiGraph({ graphData, clusterMode, onToggleCluster }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+    const dpr =
+      typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
     const width = canvasSize.width;
     const height = canvasSize.height;
     const pixelWidth = Math.floor(width * dpr);
@@ -297,15 +313,6 @@ export default function ApiGraph({ graphData, clusterMode, onToggleCluster }) {
 
       ctx.beginPath();
       ctx.moveTo(s.x, s.y);
-<<<<<<< HEAD
-      ctx.lineTo(t.x, t.y);
-      ctx.strokeStyle =
-        e.type === "fingerprint"
-          ? "rgba(34, 197, 94, 0.5)"
-          : "rgba(16, 185, 129, 0.25)";
-      ctx.lineWidth = e.type === "fingerprint" ? 1.5 : 1;
-      if (e.type === "fingerprint") ctx.setLineDash([5, 5]);
-=======
       ctx.quadraticCurveTo(mx + nx * curve, my + ny * curve, t.x, t.y);
 
       const color = EDGE_COLORS[e.type] || EDGE_COLORS.connection;
@@ -322,8 +329,6 @@ export default function ApiGraph({ graphData, clusterMode, onToggleCluster }) {
       } else {
         ctx.setLineDash([]);
       }
-
->>>>>>> 95799056cfaccdfc7304f7f727e5cb45baf956ac
       ctx.stroke();
       ctx.setLineDash([]);
 
@@ -332,7 +337,10 @@ export default function ApiGraph({ graphData, clusterMode, onToggleCluster }) {
         ctx.beginPath();
         ctx.moveTo(s.x, s.y);
         ctx.quadraticCurveTo(mx + nx * curve, my + ny * curve, t.x, t.y);
-        ctx.strokeStyle = e.type === "risk" ? "rgba(248,113,113,0.26)" : "rgba(167,139,250,0.24)";
+        ctx.strokeStyle =
+          e.type === "risk"
+            ? "rgba(248,113,113,0.26)"
+            : "rgba(167,139,250,0.24)";
         ctx.lineWidth = 5;
         ctx.stroke();
         ctx.restore();
@@ -540,10 +548,12 @@ export default function ApiGraph({ graphData, clusterMode, onToggleCluster }) {
             <span className="w-3 h-[2px] bg-indigo-300 rounded-full" /> Related
           </span>
           <span className="inline-flex items-center gap-1">
-            <span className="w-3 h-[2px] border-t-2 border-dashed border-violet-300" /> Fingerprint
+            <span className="w-3 h-[2px] border-t-2 border-dashed border-violet-300" />{" "}
+            Fingerprint
           </span>
           <span className="inline-flex items-center gap-1">
-            <span className="w-3 h-[2px] border-t-2 border-dotted border-cyan-300" /> Inferred
+            <span className="w-3 h-[2px] border-t-2 border-dotted border-cyan-300" />{" "}
+            Inferred
           </span>
         </div>
       </div>

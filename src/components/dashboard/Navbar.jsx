@@ -24,15 +24,9 @@ export default function Navbar({ alerts = [], lastUpdated }) {
 
   const unread = alerts.filter((a) => !a.read).length;
 
-<<<<<<< HEAD
-  const handleLogout = () => {
-    logout();
-    router.replace("/");
-=======
   const handleLogout = async () => {
     await logout();
-    router.replace("/login");
->>>>>>> 95799056cfaccdfc7304f7f727e5cb45baf956ac
+    router.replace("/");
   };
 
   return (

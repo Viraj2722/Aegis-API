@@ -569,9 +569,6 @@ async def get_alerts(user_id: str = Depends(get_user_id)):
 def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "service": "AegisAPI Backend"}
-
-
-<<<<<<< HEAD
 @app.post("/api/mitigations/generate")
 async def generate_mitigation(
     payload: MitigationRequest,
@@ -664,7 +661,8 @@ async def generate_mitigation(
     except Exception as e:
         print(f"Mitigation generation error: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to generate mitigation")
-=======
+
+
 @app.post("/api/reset-data")
 async def reset_user_data(user_id: str = Depends(get_user_id)):
     """Clear current user's analysis artifacts so next login starts fresh."""
@@ -757,4 +755,3 @@ async def admin_user_distribution():
     except Exception as e:
         print(f"Admin user distribution error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
->>>>>>> 95799056cfaccdfc7304f7f727e5cb45baf956ac

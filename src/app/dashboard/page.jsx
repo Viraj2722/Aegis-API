@@ -25,20 +25,118 @@ const isDemo = () =>
     : false;
 
 const DEMO_LOGS = [
-  { api: "/api/auth/login", method: "POST", response_code: 200, response_time: 280, payload_size: 1240, timestamp: "2026-04-15T10:11:00Z" },
-  { api: "/api/auth/login", method: "POST", response_code: 401, response_time: 390, payload_size: 1320, timestamp: "2026-04-15T10:14:00Z" },
-  { api: "/api/auth/login", method: "POST", response_code: 200, response_time: 260, payload_size: 1210, timestamp: "2026-04-15T10:18:00Z" },
-  { api: "/api/users", method: "GET", response_code: 200, response_time: 180, payload_size: 3400, timestamp: "2026-04-16T08:02:00Z" },
-  { api: "/api/users", method: "GET", response_code: 500, response_time: 920, payload_size: 3600, timestamp: "2026-04-16T08:05:00Z" },
-  { api: "/api/users", method: "GET", response_code: 200, response_time: 210, payload_size: 3450, timestamp: "2026-04-16T08:07:00Z" },
-  { api: "/api/payments/charge", method: "POST", response_code: 200, response_time: 560, payload_size: 980, timestamp: "2026-04-16T12:11:00Z" },
-  { api: "/api/payments/charge", method: "POST", response_code: 502, response_time: 1300, payload_size: 1020, timestamp: "2026-04-16T12:12:00Z" },
-  { api: "/api/payments/charge", method: "POST", response_code: 504, response_time: 1480, payload_size: 1100, timestamp: "2026-04-16T12:13:00Z" },
-  { api: "/api/internal/debug", method: "GET", response_code: 200, response_time: 640, payload_size: 2200, timestamp: "2026-02-01T09:20:00Z" },
-  { api: "/api/internal/debug", method: "GET", response_code: 200, response_time: 690, payload_size: 2300, timestamp: "2026-02-01T09:25:00Z" },
-  { api: "/api/reports/export", method: "GET", response_code: 200, response_time: 980, payload_size: 7800, timestamp: "2026-04-16T15:41:00Z" },
-  { api: "/api/reports/export", method: "GET", response_code: 200, response_time: 1120, payload_size: 8000, timestamp: "2026-04-16T15:42:00Z" },
-  { api: "/api/reports/export", method: "GET", response_code: 429, response_time: 870, payload_size: 7600, timestamp: "2026-04-16T15:43:00Z" },
+  {
+    api: "/api/auth/login",
+    method: "POST",
+    response_code: 200,
+    response_time: 280,
+    payload_size: 1240,
+    timestamp: "2026-04-15T10:11:00Z",
+  },
+  {
+    api: "/api/auth/login",
+    method: "POST",
+    response_code: 401,
+    response_time: 390,
+    payload_size: 1320,
+    timestamp: "2026-04-15T10:14:00Z",
+  },
+  {
+    api: "/api/auth/login",
+    method: "POST",
+    response_code: 200,
+    response_time: 260,
+    payload_size: 1210,
+    timestamp: "2026-04-15T10:18:00Z",
+  },
+  {
+    api: "/api/users",
+    method: "GET",
+    response_code: 200,
+    response_time: 180,
+    payload_size: 3400,
+    timestamp: "2026-04-16T08:02:00Z",
+  },
+  {
+    api: "/api/users",
+    method: "GET",
+    response_code: 500,
+    response_time: 920,
+    payload_size: 3600,
+    timestamp: "2026-04-16T08:05:00Z",
+  },
+  {
+    api: "/api/users",
+    method: "GET",
+    response_code: 200,
+    response_time: 210,
+    payload_size: 3450,
+    timestamp: "2026-04-16T08:07:00Z",
+  },
+  {
+    api: "/api/payments/charge",
+    method: "POST",
+    response_code: 200,
+    response_time: 560,
+    payload_size: 980,
+    timestamp: "2026-04-16T12:11:00Z",
+  },
+  {
+    api: "/api/payments/charge",
+    method: "POST",
+    response_code: 502,
+    response_time: 1300,
+    payload_size: 1020,
+    timestamp: "2026-04-16T12:12:00Z",
+  },
+  {
+    api: "/api/payments/charge",
+    method: "POST",
+    response_code: 504,
+    response_time: 1480,
+    payload_size: 1100,
+    timestamp: "2026-04-16T12:13:00Z",
+  },
+  {
+    api: "/api/internal/debug",
+    method: "GET",
+    response_code: 200,
+    response_time: 640,
+    payload_size: 2200,
+    timestamp: "2026-02-01T09:20:00Z",
+  },
+  {
+    api: "/api/internal/debug",
+    method: "GET",
+    response_code: 200,
+    response_time: 690,
+    payload_size: 2300,
+    timestamp: "2026-02-01T09:25:00Z",
+  },
+  {
+    api: "/api/reports/export",
+    method: "GET",
+    response_code: 200,
+    response_time: 980,
+    payload_size: 7800,
+    timestamp: "2026-04-16T15:41:00Z",
+  },
+  {
+    api: "/api/reports/export",
+    method: "GET",
+    response_code: 200,
+    response_time: 1120,
+    payload_size: 8000,
+    timestamp: "2026-04-16T15:42:00Z",
+  },
+  {
+    api: "/api/reports/export",
+    method: "GET",
+    response_code: 429,
+    response_time: 870,
+    payload_size: 7600,
+    timestamp: "2026-04-16T15:43:00Z",
+  },
 ];
 
 function buildStatus(api) {
@@ -135,10 +233,14 @@ function buildSimulationData(rawApis, rawEdges) {
     const apiName = row.endpoint || row.api || "unknown";
     const status = row.status || buildStatus(row);
     const calls = Number(row.call_count ?? row.calls ?? 0);
-    const responseTime = Number(row.avg_response_time ?? row.response_time ?? 0);
+    const responseTime = Number(
+      row.avg_response_time ?? row.response_time ?? 0,
+    );
     return {
       api: apiName,
-      risk_level: String(row.risk_level || statusToRiskLevel(status)).toUpperCase(),
+      risk_level: String(
+        row.risk_level || statusToRiskLevel(status),
+      ).toUpperCase(),
       error_rate: Number(row.error_rate ?? 0),
       anomaly:
         row.anomaly === -1 || row.anomaly === 1
@@ -146,14 +248,23 @@ function buildSimulationData(rawApis, rawEdges) {
           : status === "Critical" || status === "Suspicious"
             ? -1
             : 1,
-      traffic_pattern: row.traffic_pattern || classifyTrafficPattern(calls, responseTime),
-      risk_score: Number((row.risk_score ?? 0) / (row.risk_score > 1 ? 100 : 1)),
+      traffic_pattern:
+        row.traffic_pattern || classifyTrafficPattern(calls, responseTime),
+      risk_score: Number(
+        (row.risk_score ?? 0) / (row.risk_score > 1 ? 100 : 1),
+      ),
     };
   });
 
   const edges = (rawEdges || [])
     .map((e) => ({ source: e.source, target: e.target }))
-    .filter((e) => e.source && e.target && e.source !== "gateway" && e.target !== "gateway");
+    .filter(
+      (e) =>
+        e.source &&
+        e.target &&
+        e.source !== "gateway" &&
+        e.target !== "gateway",
+    );
 
   if (edges.length > 0) {
     return { apis, edges };
@@ -222,7 +333,8 @@ function buildDemoDashboardFromLogs(logRows) {
 
   const apis = Array.from(groups.values()).map((g) => {
     const errorRate = g.call_count > 0 ? g.error_count / g.call_count : 0;
-    const avgResponseTime = g.call_count > 0 ? g.total_response_time / g.call_count : 0;
+    const avgResponseTime =
+      g.call_count > 0 ? g.total_response_time / g.call_count : 0;
     const inactiveDays = g.last_seen_ts
       ? Math.floor((now - g.last_seen_ts) / (1000 * 60 * 60 * 24))
       : 0;
@@ -377,7 +489,12 @@ export default function DashboardPage() {
       setApis(transformed.apis);
       setStats(transformed.stats);
       setGraphData(transformed.graphData);
-      setSimulationData(buildSimulationData(analysisRes.data?.api_data || [], graphRes.data?.edges || []));
+      setSimulationData(
+        buildSimulationData(
+          analysisRes.data?.api_data || [],
+          graphRes.data?.edges || [],
+        ),
+      );
       setAlerts(formatAlerts(alertsRes.data?.alerts));
       updateLastUpdated();
     } catch (error) {
@@ -467,7 +584,10 @@ export default function DashboardPage() {
 
   const handleUploadClick = () => {
     if (!isProfileComplete) {
-      addToast("You must complete your profile before uploading logs", "medium");
+      addToast(
+        "You must complete your profile before uploading logs",
+        "medium",
+      );
       router.push("/profile");
       return;
     }
@@ -583,12 +703,8 @@ export default function DashboardPage() {
               <button
                 onClick={handleUploadClick}
                 disabled={uploading}
-<<<<<<< HEAD
                 className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm text-white font-medium transition-all glow-blue disabled:opacity-60 disabled:cursor-not-allowed"
-=======
-                className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm text-white font-medium transition-all glow-blue disabled:opacity-60 disabled:cursor-not-allowed"
                 title="Upload API logs"
->>>>>>> 95799056cfaccdfc7304f7f727e5cb45baf956ac
               >
                 <Upload size={13} />
                 {uploading ? "Uploading..." : "Upload Logs"}
@@ -634,7 +750,11 @@ export default function DashboardPage() {
                 onClick={() => setTab(t)}
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${tab === t ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-white"}`}
               >
-                {t === "table" ? "API Table" : t === "graph" ? "Graph View" : "Attack Simulation"}
+                {t === "table"
+                  ? "API Table"
+                  : t === "graph"
+                    ? "Graph View"
+                    : "Attack Simulation"}
               </button>
             ))}
           </div>
