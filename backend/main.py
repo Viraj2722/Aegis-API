@@ -123,9 +123,21 @@ def _detect_traffic_pattern(row: Dict[str, Any]) -> str:
     return "steady traffic"
 
 
+def _traffic_risk_score(pattern: str) -> float:
+    traffic = str(pattern or "steady traffic").lower()
+    if traffic == "sudden spike":
+        return 0.9
+    if traffic == "error-heavy burst":
+        return 0.8
+    if traffic == "inactive endpoint":
+        return 0.7
+    return 0.15
+
+
 def _build_llm_payload(row: Dict[str, Any]) -> Dict[str, Any]:
     risk_level = str(row.get("risk_level") or "LOW").upper()
     anomaly = -1 if risk_level in ["HIGH", "CRITICAL"] else 1
+    traffic_pattern = row.get("traffic_pattern") or _detect_traffic_pattern(row)
     return {
         "endpoint": row.get("endpoint"),
         "error_rate": float(row.get("error_rate") or 0),
@@ -133,7 +145,7 @@ def _build_llm_payload(row: Dict[str, Any]) -> Dict[str, Any]:
         "anomaly": anomaly,
         "risk_level": risk_level,
         "auth_type": "Unknown",
-        "traffic_pattern": _detect_traffic_pattern(row),
+        "traffic_pattern": traffic_pattern,
     }
 
 
@@ -291,6 +303,32 @@ def _fallback_mitigation(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _annotate_traffic_analysis(df: pd.DataFrame) -> pd.DataFrame:
+    """Derive traffic analysis labels before persisting analysis rows."""
+    if df.empty:
+        return df
+
+    traffic_patterns = []
+    traffic_risks = []
+    for _, row in df.iterrows():
+        traffic_pattern = _detect_traffic_pattern(row.to_dict())
+        traffic_patterns.append(traffic_pattern)
+        traffic_risks.append(_traffic_risk_score(traffic_pattern))
+
+    result_df = df.copy()
+    result_df["traffic_pattern"] = traffic_patterns
+    result_df["traffic_risk_score"] = traffic_risks
+
+    if "risk_score" in result_df.columns:
+        result_df["risk_score"] = (
+            pd.to_numeric(result_df["risk_score"], errors="coerce").fillna(0).astype(float)
+            .add(result_df["traffic_risk_score"] * 15)
+            .clip(upper=100)
+        )
+
+    return result_df
+
+
 def generate_groq_mitigation(context_payload: Dict[str, Any]) -> Dict[str, Any]:
     if not GROQ_API_KEY:
         fallback = _fallback_mitigation(context_payload.get("input", {}))
@@ -446,6 +484,7 @@ async def upload_logs(logs: List[Dict[str, Any]], user_id: str = Depends(get_use
         
         # Run risk detection
         analysis_df = risk_model.detect_risks(df, user_id)
+        analysis_df = _annotate_traffic_analysis(analysis_df)
         
         if len(analysis_df) > 0:
             # Convert to dict for Supabase
@@ -469,6 +508,8 @@ async def upload_logs(logs: List[Dict[str, Any]], user_id: str = Depends(get_use
                 "high_count": len(analysis_df[analysis_df["risk_level"] == "HIGH"]),
                 "zombie_count": len(analysis_df[analysis_df["is_zombie"]]),
                 "shadow_count": len(analysis_df[analysis_df["is_shadow_api"]]),
+                "sudden_spike_count": len(analysis_df[analysis_df["traffic_pattern"] == "sudden spike"]),
+                "error_heavy_count": len(analysis_df[analysis_df["traffic_pattern"] == "error-heavy burst"]),
                 "alerts_created": alert_count,
             }
             SupabaseOps.update_upload_session(session_id, "COMPLETED", processed_count, summary)
@@ -517,6 +558,7 @@ async def get_analysis(user_id: str = Depends(get_user_id)):
             "critical_apis": int((df["risk_level"] == "CRITICAL").sum()),
             "high_apis": int((df["risk_level"] == "HIGH").sum()),
             "suspicious_apis": int(df["is_shadow_api"].sum()),
+            "traffic_spike_apis": int((df.get("traffic_pattern", pd.Series(dtype=str)) == "sudden spike").sum()) if "traffic_pattern" in df.columns else int(((df["daily_calls"] > 500)).sum()),
         }
         
         return {

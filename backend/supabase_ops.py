@@ -138,6 +138,7 @@ class SupabaseOps:
                 "is_shadow_api": bool(record.get("is_shadow_api", False)),
                 "anomaly_score": SupabaseOps._as_float(record.get("anomaly_score", 0)),
                 "fingerprint": record.get("fingerprint"),
+                "traffic_pattern": record.get("traffic_pattern"),
             }
             records.append(api_record)
         
@@ -236,7 +237,7 @@ class SupabaseOps:
         """
         try:
             client = _require_supabase()
-            result = supabase.table("upload_sessions").insert({
+            result = client.table("upload_sessions").insert({
                 "user_id": user_id,
                 "log_count": log_count,
                 "status": "PROCESSING"

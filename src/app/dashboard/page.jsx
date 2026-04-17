@@ -151,6 +151,17 @@ function buildStatus(api) {
   return "Normal";
 }
 
+function detectTrafficPattern(row) {
+  const dailyCalls = Number(row?.daily_calls ?? row?.call_count ?? row?.calls ?? 0);
+  const errorRate = Number(row?.error_rate ?? 0);
+  const inactiveDays = Number(row?.days_inactive ?? row?.inactive_days ?? 0);
+
+  if (inactiveDays > 30) return "inactive endpoint";
+  if (dailyCalls > 500) return "sudden spike";
+  if (errorRate > 0.3 && dailyCalls > 50) return "error-heavy burst";
+  return "steady traffic";
+}
+
 function formatAlerts(alertRows) {
   return (alertRows || []).map((a) => ({
     id: a.id,
@@ -177,6 +188,7 @@ function transformAnalysisToDashboard(analysis) {
     similar_api: null,
     similarity: null,
     relationship: row.is_shadow_api ? "Shadow" : null,
+    traffic_pattern: row.traffic_pattern || detectTrafficPattern(row),
   }));
 
   const stats = {
@@ -185,6 +197,7 @@ function transformAnalysisToDashboard(analysis) {
     critical_apis: apis.filter((a) => a.status === "Critical").length,
     duplicate_apis: apis.filter((a) => a.relationship === "Duplicate").length,
     shadow_apis: apis.filter((a) => a.relationship === "Shadow").length,
+    traffic_spike_apis: apis.filter((a) => a.traffic_pattern === "sudden spike").length,
   };
 
   const graphData = {
@@ -383,6 +396,7 @@ function buildDemoDashboardFromLogs(logRows) {
     critical_apis: apis.filter((a) => a.status === "Critical").length,
     duplicate_apis: apis.filter((a) => a.relationship === "Duplicate").length,
     shadow_apis: apis.filter((a) => a.relationship === "Shadow").length,
+    traffic_spike_apis: apis.filter((a) => a.traffic_pattern === "sudden spike").length,
   };
 
   const graphData = {
