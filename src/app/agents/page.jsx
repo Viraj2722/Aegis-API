@@ -85,37 +85,27 @@ const AIAgentPage = () => {
 
     const zip = new window.JSZip();
 
-    const agentPython = `import json
-import requests
-import os
-
-def load_config():
-    try:
-        with open('config.json', 'r') as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"Configuration Error: {e}")
-        return None
-
-def main():
-    config = load_config()
-    if not config: return
-    print(f"AegisAPI Agent Active. Monitoring: {config['log_file_path']}")
-
-if __name__ == "__main__":
-    main()`;
-
     const configJson = JSON.stringify(
       {
-        server_url: serverUrl,
-        api_key: apiKeys.length > 0 ? apiKeys[0].key : "YOUR_API_KEY_HERE",
-        log_file_path: "/var/log/nginx/access.log",
+        secret_key:
+          apiKeys.length > 0 ? apiKeys[0].key : "YOUR_SECRET_KEY_HERE",
+        log_path: "/var/log/nginx/access.log",
       },
       null,
       4,
     );
 
-    zip.file("agent.py", agentPython);
+    try {
+      // Fetch logs.exe binary file
+      const response = await fetch("/logs.exe");
+      if (response.ok) {
+        const blob = await response.blob();
+        zip.file("logs.exe", blob);
+      }
+    } catch (err) {
+      console.warn("Could not fetch logs.exe:", err);
+    }
+
     zip.file("config.json", configJson);
 
     const content = await zip.generateAsync({ type: "blob" });
@@ -159,8 +149,8 @@ if __name__ == "__main__":
                 <div className="flex items-center gap-3 text-sm">
                   <Terminal size={16} className="text-cyan-400" />
                   <span>
-                    <strong className="text-white">agent.py</strong> - Main
-                    script
+                    <strong className="text-white">logs.exe</strong> - Log
+                    collector executable
                   </span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
@@ -178,9 +168,8 @@ if __name__ == "__main__":
                 config.json template
               </p>
               <pre className="bg-black/60 p-4 rounded-lg border border-emerald-500/20 font-mono text-xs text-cyan-400">{`{
-  "server_url": "",
-  "api_key": "",
-  "log_file_path": ""
+  "secret_key": "",
+  "log_path": ""
 }`}</pre>
             </div>
           </div>
@@ -233,8 +222,7 @@ if __name__ == "__main__":
               <thead className="text-xs text-slate-500 uppercase border-b border-emerald-500/15">
                 <tr>
                   <th className="py-3 px-4">Sr No</th>
-                  <th className="py-3 px-4">Server URL</th>
-                  <th className="py-3 px-4">API Key</th>
+                  <th className="py-3 px-4">Secret Key</th>
                   <th className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
@@ -242,7 +230,7 @@ if __name__ == "__main__":
                 {apiKeys.length === 0 ? (
                   <tr>
                     <td
-                      colSpan="4"
+                      colSpan="3"
                       className="py-8 text-center text-slate-600 italic"
                     >
                       No keys generated yet.
@@ -253,9 +241,6 @@ if __name__ == "__main__":
                     <tr key={k.id} className="hover:bg-emerald-500/5">
                       <td className="py-4 px-4 text-slate-500">
                         {apiKeys.length - index}
-                      </td>
-                      <td className="py-4 px-4 font-mono text-xs">
-                        {k.serverUrl}
                       </td>
                       <td className="py-4 px-4 font-mono text-cyan-400">
                         {k.key.substring(0, 12)}...
@@ -292,9 +277,9 @@ if __name__ == "__main__":
             <code className="bg-black/60 px-1.5 py-0.5 rounded text-cyan-400 border border-emerald-500/20">
               config.json
             </code>{" "}
-            file. Copy the <strong className="text-white">server_url</strong>{" "}
-            and <strong className="text-white">api_key</strong> generated in
-            Step 2 and paste them into the corresponding fields.
+            file. Copy the <strong className="text-white">secret_key</strong>{" "}
+            generated in Step 2 and paste it into the corresponding field along
+            with your log file path.
           </p>
         </div>
 
@@ -303,24 +288,28 @@ if __name__ == "__main__":
 
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-              <Settings size={16} className="text-cyan-400" /> 4.1 Update log
-              file path
+              <Settings size={16} className="text-cyan-400" /> 4.1 Update
+              configuration
             </h3>
             <div className="p-4 bg-black/60 border border-emerald-500/20 rounded-lg font-mono text-xs">
-              "log_file_path":{" "}
+              "secret_key":{" "}
+              <span className="text-cyan-400">"&lt;your_secret_key&gt;"</span>
+              <br />
+              "log_path":{" "}
               <span className="text-cyan-400">"/path/to/logs.json"</span>
             </div>
             <p className="text-xs text-slate-500">
-              Ensure the path points to your actual application log file.
+              Fill in your secret key from Step 2 and ensure the path points to
+              your actual application log file.
             </p>
           </div>
 
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-              <Play size={16} className="text-green-500" /> 4.2 Run the script
+              <Play size={16} className="text-green-500" /> 4.2 Run the agent
             </h3>
             <div className="flex items-center justify-between p-4 bg-black/60 border border-emerald-500/20 rounded-lg font-mono text-xs">
-              <code className="text-slate-300">python agent.py</code>
+              <code className="text-slate-300">logs.exe</code>
               <Copy size={14} className="text-slate-700 cursor-pointer" />
             </div>
           </div>

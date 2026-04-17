@@ -90,10 +90,18 @@ class SupabaseOps:
     @staticmethod
     def clear_user_data(user_id: str) -> None:
         """Delete per-user analysis artifacts to start with a clean dashboard state."""
-        tables = ["risk_alerts", "graph_data", "api_analysis", "upload_sessions"]
+        # Delete child/dependent rows first to satisfy FK constraints.
+        tables = [
+            "risk_alerts",
+            "api_mitigations",
+            "graph_data",
+            "api_analysis",
+            "upload_sessions",
+        ]
+        client = _require_supabase()
         for table in tables:
             try:
-                supabase.table(table).delete().eq("user_id", user_id).execute()
+                client.table(table).delete().eq("user_id", user_id).execute()
             except Exception as e:
                 print(f"Error clearing {table} for user {user_id}: {e}")
     
