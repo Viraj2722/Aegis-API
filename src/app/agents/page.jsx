@@ -30,7 +30,7 @@ const AIAgentPage = () => {
   const [isZipLoading, setIsZipLoading] = useState(true);
   const [zipError, setZipError] = useState(false);
 
-  const serverUrl = "/api/agent/ingest";
+  const ingestPath = "/api/agent/ingest";
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -99,7 +99,7 @@ const AIAgentPage = () => {
         throw new Error("Sign in with a real account to generate agent keys");
       }
 
-      const dashboardUrl = `${window.location.origin}/dashboard`;
+      const dashboardUrl = `${window.location.origin}/dashboard/user/${user.id}`;
       const response = await api.post("/agents", { dashboard_url: dashboardUrl });
       const row = response?.data || {};
 
@@ -153,7 +153,6 @@ const AIAgentPage = () => {
       {
         secret_key:
           apiKeys.length > 0 ? apiKeys[0].key : "YOUR_SECRET_KEY_HERE",
-        ingest_url: serverUrl,
         log_path: "/var/log/nginx/access.log",
       },
       null,
@@ -166,7 +165,7 @@ const AIAgentPage = () => {
       if (response.ok) {
         const blob = await response.blob();
         zip.file("logs.exe", blob);
-      }
+      }   
     } catch (err) {
       console.warn("Could not fetch logs.exe:", err);
     }
@@ -253,9 +252,12 @@ const AIAgentPage = () => {
               </p>
               <pre className="bg-black/60 p-4 rounded-lg border border-emerald-500/20 font-mono text-xs text-cyan-400">{`{
   "secret_key": "",
-  "ingest_url": "${serverUrl}",
   "log_path": ""
 }`}</pre>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                logs.exe should send normalized logs + secret_key to
+                <span className="text-cyan-400"> {ingestPath}</span> (backend URL).
+              </p>
             </div>
           </div>
 
@@ -379,7 +381,7 @@ const AIAgentPage = () => {
             </code>{" "}
             file. Copy the <strong className="text-white">secret_key</strong>{" "}
             generated in Step 2 and paste it into the corresponding field along
-            with your log file path.
+            with your log file path. The ingest URL is handled by logs.exe.
           </p>
         </div>
 

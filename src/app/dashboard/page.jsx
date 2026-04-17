@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRef } from "react";
 import { motion } from "framer-motion";
 import { RefreshCw, Upload, Database } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ProtectedRoute from "../../components/auth/ProtectedRoute";
 import Navbar from "../../components/dashboard/Navbar";
 import StatCards from "../../components/dashboard/StatCards";
@@ -439,7 +439,9 @@ function buildDemoDashboardFromLogs(logRows) {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, profile, refreshProfile, isDemoMode, isAdmin } = useAuth();
+  const requestedUid = (searchParams.get("uid") || "").trim();
   const uploadInputRef = useRef(null);
   const [demoLogs, setDemoLogs] = useState(DEMO_LOGS);
   const [apis, setApis] = useState([]);
@@ -543,6 +545,17 @@ export default function DashboardPage() {
       router.replace("/admin");
     }
   }, [isDemoMode, isAdmin, router]);
+
+  useEffect(() => {
+    if (isDemoMode) return;
+    if (!requestedUid) return;
+    if (!user?.id) return;
+
+    if (requestedUid !== user.id) {
+      addToast("Access denied for this dashboard URL", "high");
+      router.replace("/dashboard");
+    }
+  }, [requestedUid, user?.id, isDemoMode, router, addToast]);
 
   useEffect(() => {
     if (isDemoMode) return;
