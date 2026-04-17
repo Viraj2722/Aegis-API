@@ -14,7 +14,6 @@ import AlertBanner from "../../components/dashboard/AlertBanner";
 import { Toast, useToasts } from "../../components/dashboard/Toast";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../utils/api";
-import { MOCK_ALERTS } from "../../utils/mockData";
 import { uploadLogFile } from "../../utils/logUpload";
 
 const DEMO_TOKEN = "demo_token";
@@ -24,11 +23,22 @@ const isDemo = () =>
     : false;
 
 function buildStatus(api) {
-  if (api.risk_level === "Critical") return "Critical";
+  const level = String(api.risk_level || "").toUpperCase();
+  if (level === "CRITICAL") return "Critical";
   if (api.is_zombie) return "Zombie";
-  if (api.risk_level === "High" || api.risk_level === "Medium")
+  if (level === "HIGH" || level === "MEDIUM")
     return "Suspicious";
   return "Normal";
+}
+
+function formatAlerts(alertRows) {
+  return (alertRows || []).map((a) => ({
+    id: a.id,
+    read: false,
+    severity: String(a.severity || "medium").toLowerCase(),
+    message: a.title || a.description || "Risk alert",
+    time: "just now",
+  }));
 }
 
 function transformAnalysisToDashboard(analysis) {
@@ -37,7 +47,7 @@ function transformAnalysisToDashboard(analysis) {
   const apis = rawApis.map((row) => ({
     id: row.endpoint,
     endpoint: row.endpoint,
-    method: row.endpoint?.includes("/auth") ? "POST" : "GET",
+    method: row.method || (row.endpoint?.includes("/auth") ? "POST" : "GET"),
     risk_score: Math.max(0, Math.min(1, (row.risk_score || 0) / 100)),
     status: buildStatus(row),
     error_rate: (row.error_rate || 0) * 100,
@@ -107,9 +117,10 @@ export default function DashboardPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [analysisRes, graphRes] = await Promise.all([
+      const [analysisRes, graphRes, alertsRes] = await Promise.all([
         api.get("/analysis"),
         api.get("/graph"),
+        api.get("/alerts"),
       ]);
       const transformed = transformAnalysisToDashboard(analysisRes.data);
 
@@ -118,7 +129,7 @@ export default function DashboardPage() {
       setApis(transformed.apis);
       setStats(transformed.stats);
       setGraphData(transformed.graphData);
-      setAlerts(MOCK_ALERTS);
+      setAlerts(formatAlerts(alertsRes.data?.alerts));
       updateLastUpdated();
     } catch {
       setApis([]);
@@ -130,7 +141,7 @@ export default function DashboardPage() {
         shadow_apis: 0,
       });
       setGraphData({ nodes: [], links: [] });
-      setAlerts(MOCK_ALERTS);
+      setAlerts([]);
       updateLastUpdated();
     } finally {
       setLoading(false);
@@ -139,12 +150,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(() => {
-      fetchData();
-      addToast("Dashboard refreshed with latest data", "success");
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [fetchData, addToast]);
+  }, [fetchData]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -297,7 +303,7 @@ export default function DashboardPage() {
               <Database size={11} />
               {`${apis.length} endpoints monitored`}
             </div>
-            <span>Auto-refresh every 30s · Last updated: {lastUpdated}</span>
+            <span>Last updated: {lastUpdated}</span>
           </div>
         </main>
 
