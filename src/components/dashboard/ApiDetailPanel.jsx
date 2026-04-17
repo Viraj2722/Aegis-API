@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -48,6 +49,15 @@ export default function ApiDetailPanel({
   mitigationLoading,
   mitigationError,
 }) {
+  useEffect(() => {
+    if (mitigation?.llm_error) {
+      console.error("AI mitigation error:", mitigation.llm_error);
+      if (mitigation.llm_error_body) {
+        console.error("AI mitigation error body:", mitigation.llm_error_body);
+      }
+    }
+  }, [mitigation]);
+
   const normalizedSteps =
     (Array.isArray(mitigation?.mitigation_steps)
       ? mitigation.mitigation_steps.filter(
