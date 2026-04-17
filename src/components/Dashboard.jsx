@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from "react";
 import { AlertTriangle, Activity, Search, Filter, ServerCrash, TrendingUp, TrendingDown, Database, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 

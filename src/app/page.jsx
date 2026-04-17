@@ -1,10 +1,11 @@
+"use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import { Shield, Zap, Activity, Ghost, BarChart3, Lock, ChevronRight, AlertOctagon, RefreshCw, UploadCloud, FileJson, Crosshair } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Dashboard from './components/Dashboard';
-import ApiGraph from './components/ApiGraph';
-import ApiDetailsPanel from './components/ApiDetailsPanel';
-import { aegisApi } from './api';
+import Dashboard from '../components/Dashboard';
+import ApiGraph from '../components/ApiGraph';
+import ApiDetailsPanel from '../components/ApiDetailsPanel';
+import { aegisApi } from '../api';
 
 export default function App() {
   const [data, setData] = useState(null);
