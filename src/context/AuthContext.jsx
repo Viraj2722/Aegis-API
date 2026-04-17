@@ -62,6 +62,32 @@ function mapProfileRow(row) {
   };
 }
 
+function clearLocalAuthArtifacts() {
+  if (typeof window === "undefined") return;
+
+  localStorage.removeItem(TOKEN_KEY);
+
+  const localKeysToDelete = [];
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i);
+    if (!key) continue;
+    if (key.startsWith("aegis_") || key.includes("supabase") || key.startsWith("sb-")) {
+      localKeysToDelete.push(key);
+    }
+  }
+  localKeysToDelete.forEach((key) => localStorage.removeItem(key));
+
+  const sessionKeysToDelete = [];
+  for (let i = 0; i < sessionStorage.length; i += 1) {
+    const key = sessionStorage.key(i);
+    if (!key) continue;
+    if (key.startsWith("aegis_") || key.includes("supabase") || key.startsWith("sb-")) {
+      sessionKeysToDelete.push(key);
+    }
+  }
+  sessionKeysToDelete.forEach((key) => sessionStorage.removeItem(key));
+}
+
 async function upsertProfile(user) {
   if (!user) return;
   const metadata = user.user_metadata || {};
@@ -316,6 +342,7 @@ export function AuthProvider({ children }) {
   };
 
   const loginDemo = () => {
+    clearLocalAuthArtifacts();
     localStorage.setItem(TOKEN_KEY, DEMO_TOKEN);
     setUser(DEMO_USER);
     setProfile(DEMO_PROFILE);
@@ -366,12 +393,20 @@ export function AuthProvider({ children }) {
       }
     }
 
-    localStorage.removeItem(TOKEN_KEY);
-    await supabase.auth.signOut();
+    clearLocalAuthArtifacts();
+
+    try {
+      await supabase.auth.signOut({ scope: "global" });
+    } catch {
+      // Fallback for environments that do not support global scope.
+      await supabase.auth.signOut();
+    }
+
     setUser(null);
     setProfile(null);
     setIsAdminClaim(false);
     setIsDemoMode(false);
+    setError(null);
   };
 
   const value = useMemo(

@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Header, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from risk_detector import RiskDetectionModel
 from supabase_ops import SupabaseOps
 import pandas as pd
@@ -107,6 +108,15 @@ def get_user_id(authorization: Optional[str] = Header(None)) -> str:
 class MitigationRequest(BaseModel):
     endpoint: str
     method: Optional[str] = None
+
+
+class AgentCreateRequest(BaseModel):
+    dashboard_url: str
+
+
+class AgentIngestRequest(BaseModel):
+    secret_key: str
+    logs: List[Dict[str, Any]]
 
 
 def _detect_traffic_pattern(row: Dict[str, Any]) -> str:
@@ -338,6 +348,58 @@ def _annotate_traffic_analysis(df: pd.DataFrame) -> pd.DataFrame:
     return result_df
 
 
+def _process_logs_for_user(user_id: str, logs: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Shared ingestion pipeline used by dashboard upload and agent ingestion."""
+    if not logs:
+        raise ValueError("No logs provided")
+
+    session_id = SupabaseOps.create_upload_session(user_id, len(logs))
+    processed_count = 0
+    analysis_df = pd.DataFrame()
+    summary = {}
+
+    try:
+        df = normalize_logs_dataframe(logs)
+        processed_count = len(df)
+
+        analysis_df = risk_model.detect_risks(df, user_id)
+        analysis_df = _annotate_traffic_analysis(analysis_df)
+
+        if len(analysis_df) > 0:
+            analysis_records = analysis_df.to_dict(orient="records")
+            SupabaseOps.upsert_api_analysis(user_id, analysis_records)
+            SupabaseOps.clear_unresolved_alerts(user_id)
+            alert_count = SupabaseOps.create_risk_alerts(user_id, analysis_df)
+
+            nodes, edges = risk_model.get_graph_nodes_edges(analysis_df)
+            SupabaseOps.save_graph_data(user_id, nodes, edges)
+
+            summary = {
+                "total_apis": len(analysis_df),
+                "critical_count": len(analysis_df[analysis_df["risk_level"] == "CRITICAL"]),
+                "high_count": len(analysis_df[analysis_df["risk_level"] == "HIGH"]),
+                "zombie_count": len(analysis_df[analysis_df["is_zombie"]]),
+                "shadow_count": len(analysis_df[analysis_df["is_shadow_api"]]),
+                "sudden_spike_count": len(analysis_df[analysis_df["traffic_pattern"] == "sudden spike"]),
+                "error_heavy_count": len(analysis_df[analysis_df["traffic_pattern"] == "error-heavy burst"]),
+                "alerts_created": alert_count,
+            }
+        else:
+            SupabaseOps.clear_unresolved_alerts(user_id)
+
+        SupabaseOps.update_upload_session(session_id, "COMPLETED", processed_count, summary)
+
+        return {
+            "session_id": session_id,
+            "logs_ingested": processed_count,
+            "apis_analyzed": len(analysis_df),
+            "summary": summary,
+        }
+    except Exception:
+        SupabaseOps.update_upload_session(session_id, "FAILED", processed_count, None, "Upload/analysis failed")
+        raise
+
+
 def generate_groq_mitigation(context_payload: Dict[str, Any]) -> Dict[str, Any]:
     if not GROQ_API_KEY:
         raise RuntimeError("GROQ_API_KEY is missing")
@@ -495,64 +557,83 @@ async def upload_logs(logs: List[Dict[str, Any]], user_id: str = Depends(get_use
     5. Create alerts for high-risk APIs
     6. Return results
     """
-    session_id = None
     try:
-        if not logs:
-            raise ValueError("No logs provided")
-        
-        # Create upload session
-        session_id = SupabaseOps.create_upload_session(user_id, len(logs))
-        
-        # Normalize logs in-memory only; raw rows are not persisted for security.
-        df = normalize_logs_dataframe(logs)
-        processed_count = len(df)
-        
-        # Run risk detection
-        analysis_df = risk_model.detect_risks(df, user_id)
-        analysis_df = _annotate_traffic_analysis(analysis_df)
-        
-        if len(analysis_df) > 0:
-            # Convert to dict for Supabase
-            analysis_records = analysis_df.to_dict(orient="records")
-            
-            # Upsert analysis results into api_analysis.
-            SupabaseOps.upsert_api_analysis(user_id, analysis_records)
-            
-            # Replace old unresolved alerts with latest alert set.
-            SupabaseOps.clear_unresolved_alerts(user_id)
-            alert_count = SupabaseOps.create_risk_alerts(user_id, analysis_df)
-            
-            # Generate graph data
-            nodes, edges = risk_model.get_graph_nodes_edges(analysis_df)
-            SupabaseOps.save_graph_data(user_id, nodes, edges)
-            
-            # Update session status
-            summary = {
-                "total_apis": len(analysis_df),
-                "critical_count": len(analysis_df[analysis_df["risk_level"] == "CRITICAL"]),
-                "high_count": len(analysis_df[analysis_df["risk_level"] == "HIGH"]),
-                "zombie_count": len(analysis_df[analysis_df["is_zombie"]]),
-                "shadow_count": len(analysis_df[analysis_df["is_shadow_api"]]),
-                "sudden_spike_count": len(analysis_df[analysis_df["traffic_pattern"] == "sudden spike"]),
-                "error_heavy_count": len(analysis_df[analysis_df["traffic_pattern"] == "error-heavy burst"]),
-                "alerts_created": alert_count,
-            }
-            SupabaseOps.update_upload_session(session_id, "COMPLETED", processed_count, summary)
-        else:
-            SupabaseOps.clear_unresolved_alerts(user_id)
-            SupabaseOps.update_upload_session(session_id, "COMPLETED", processed_count, {})
-        
+        result = _process_logs_for_user(user_id, logs)
         return {
             "message": "Logs uploaded and analyzed successfully",
-            "session_id": session_id,
-            "logs_ingested": processed_count,
-            "apis_analyzed": len(analysis_df),
-            "summary": summary if len(analysis_df) > 0 else {}
+            **result,
         }
     
     except Exception as e:
         print(f"Upload error: {str(e)}")
-        SupabaseOps.update_upload_session(session_id, "FAILED", 0, None, str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/agents")
+async def create_agent_key(payload: AgentCreateRequest, user_id: str = Depends(get_user_id)):
+    """Generate and persist an agent secret key for the authenticated user."""
+    try:
+        dashboard_url = (payload.dashboard_url or "").strip()
+        if not dashboard_url:
+            raise HTTPException(status_code=400, detail="dashboard_url is required")
+
+        agent = SupabaseOps.create_agent(user_id=user_id, dashboard_url=dashboard_url)
+        if not agent:
+            raise HTTPException(status_code=500, detail="Failed to create agent key")
+
+        return {
+            "id": agent.get("id"),
+            "secret_key": agent.get("secret_key"),
+            "dashboard_url": agent.get("dashboard_url"),
+            "created_at": agent.get("created_at"),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Create agent key error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Unable to create agent key")
+
+
+@app.get("/api/agents")
+async def list_agent_keys(user_id: str = Depends(get_user_id)):
+    """List all agent keys for the authenticated user."""
+    try:
+        rows = SupabaseOps.list_user_agents(user_id)
+        return {"agents": rows}
+    except Exception as e:
+        print(f"List agent keys error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Unable to list agent keys")
+
+
+@app.post("/api/agent/ingest")
+async def ingest_agent_logs(payload: AgentIngestRequest, redirect: bool = Query(True)):
+    """Ingest normalized logs using a secret key generated by a user from the agents page."""
+    try:
+        secret_key = (payload.secret_key or "").strip()
+        if not secret_key:
+            raise HTTPException(status_code=401, detail="Missing secret key")
+
+        agent = SupabaseOps.get_agent_by_secret(secret_key)
+        if not agent:
+            raise HTTPException(status_code=401, detail="Invalid secret key")
+
+        user_id = agent.get("user_id")
+        dashboard_url = agent.get("dashboard_url")
+        result = _process_logs_for_user(user_id, payload.logs)
+
+        if redirect and dashboard_url:
+            return RedirectResponse(url=dashboard_url, status_code=307)
+
+        return {
+            "message": "Agent logs ingested successfully",
+            "dashboard_url": dashboard_url,
+            "secret_key": secret_key,
+            **result,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Agent ingest error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/api/analysis")

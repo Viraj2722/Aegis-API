@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
   ShieldCheck,
-  Bell,
   LogOut,
   User,
   LayoutDashboard,
@@ -20,9 +19,6 @@ export default function Navbar({ alerts = [], lastUpdated }) {
   const { user, logout, isAdmin } = useAuth();
   const router = useRouter();
   const [showUser, setShowUser] = useState(false);
-  const [showAlerts, setShowAlerts] = useState(false);
-
-  const unread = alerts.filter((a) => !a.read).length;
 
   const handleLogout = async () => {
     await logout();
@@ -60,75 +56,7 @@ export default function Navbar({ alerts = [], lastUpdated }) {
         <div className="relative">
           <button
             onClick={() => {
-              setShowAlerts(!showAlerts);
-              setShowUser(false);
-            }}
-            className="relative w-9 h-9 rounded-lg bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60 flex items-center justify-center transition-all"
-          >
-            <Bell size={16} className="text-slate-300" />
-            {unread > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center">
-                {unread}
-              </span>
-            )}
-          </button>
-
-          <AnimatePresence>
-            {showAlerts && (
-              <motion.div
-                initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                className="absolute right-0 top-11 w-80 glass rounded-xl border border-slate-700/60 shadow-2xl overflow-hidden z-50"
-              >
-                <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-white">
-                    Alerts
-                  </span>
-                  {unread > 0 && (
-                    <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">
-                      {unread} new
-                    </span>
-                  )}
-                </div>
-                <div className="max-h-72 overflow-y-auto scrollbar-thin">
-                  {alerts.length === 0 ? (
-                    <p className="text-slate-500 text-sm text-center py-6">
-                      No alerts
-                    </p>
-                  ) : (
-                    alerts.map((alert) => (
-                      <div
-                        key={alert.id}
-                        className={`px-4 py-3 border-b border-slate-800/60 hover:bg-slate-800/40 transition-colors ${!alert.read ? "bg-slate-800/20" : ""}`}
-                      >
-                        <div className="flex items-start gap-2">
-                          <div
-                            className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${alert.severity === "critical" ? "bg-red-500" : alert.severity === "high" ? "bg-orange-500" : "bg-yellow-500"}`}
-                          />
-                          <div>
-                            <p className="text-slate-200 text-xs leading-relaxed">
-                              {alert.message}
-                            </p>
-                            <p className="text-slate-500 text-xs mt-1">
-                              {alert.time}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        <div className="relative">
-          <button
-            onClick={() => {
               setShowUser(!showUser);
-              setShowAlerts(false);
             }}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60 transition-all"
           >
@@ -195,11 +123,10 @@ export default function Navbar({ alerts = [], lastUpdated }) {
         </div>
       </div>
 
-      {(showAlerts || showUser) && (
+      {showUser && (
         <div
           className="fixed inset-0 z-40"
           onClick={() => {
-            setShowAlerts(false);
             setShowUser(false);
           }}
         />

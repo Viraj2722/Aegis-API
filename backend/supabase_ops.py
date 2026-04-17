@@ -4,6 +4,7 @@ Supabase client and utilities for backend operations
 
 import os
 import math
+import secrets
 from supabase import create_client, Client
 from typing import List, Dict, Any
 from pathlib import Path
@@ -77,6 +78,61 @@ class SupabaseOps:
         if not user or not user.id:
             raise ValueError("Invalid access token")
         return user.id
+
+    @staticmethod
+    def _generate_agent_secret_key() -> str:
+        return f"ag_{secrets.token_urlsafe(24)}"
+
+    @staticmethod
+    def create_agent(user_id: str, dashboard_url: str, secret_key: str = None) -> Dict[str, Any]:
+        """Create an agent key mapped to a dashboard URL for a user."""
+        client = _require_supabase()
+        key = (secret_key or SupabaseOps._generate_agent_secret_key()).strip()
+        record = {
+            "user_id": user_id,
+            "secret_key": key,
+            "dashboard_url": dashboard_url,
+        }
+        try:
+            result = client.table("agents").insert(record).execute()
+            return result.data[0] if result.data else {}
+        except Exception as e:
+            print(f"Error creating agent key: {e}")
+            raise
+
+    @staticmethod
+    def get_agent_by_secret(secret_key: str) -> Dict[str, Any]:
+        """Resolve an agent row from a provided secret key."""
+        try:
+            client = _require_supabase()
+            result = (
+                client.table("agents")
+                .select("id,user_id,secret_key,dashboard_url,created_at")
+                .eq("secret_key", secret_key)
+                .limit(1)
+                .execute()
+            )
+            return result.data[0] if result.data else {}
+        except Exception as e:
+            print(f"Error fetching agent by secret: {e}")
+            return {}
+
+    @staticmethod
+    def list_user_agents(user_id: str) -> List[Dict[str, Any]]:
+        """List all generated agent keys for the authenticated user."""
+        try:
+            client = _require_supabase()
+            result = (
+                client.table("agents")
+                .select("id,secret_key,dashboard_url,created_at")
+                .eq("user_id", user_id)
+                .order("created_at", desc=True)
+                .execute()
+            )
+            return result.data or []
+        except Exception as e:
+            print(f"Error listing agents: {e}")
+            return []
     
     @staticmethod
     def clear_unresolved_alerts(user_id: str) -> None:

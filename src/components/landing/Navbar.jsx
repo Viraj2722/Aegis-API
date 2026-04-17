@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const navLinks = [
   { label: "Features", href: "/#features" },
@@ -11,9 +12,11 @@ const navLinks = [
   { label: "Pricing", href: "/#pricing" },
 ];
 
-export default function Navbar() {
+export default function Navbar({ hideAuthActions = false }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+  const showAgentsLink = pathname !== "/agents";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -68,31 +71,35 @@ export default function Navbar() {
                 {item.label}
               </Link>
             ))}
-            <Link
-              href="/agents"
-              className="hover:text-cyan-400 transition-colors duration-200 font-medium"
-            >
-              Agents
-            </Link>
+            {showAgentsLink && (
+              <Link
+                href="/agents"
+                className="hover:text-cyan-400 transition-colors duration-200 font-medium"
+              >
+                Agents
+              </Link>
+            )}
           </div>
 
-          <div className="hidden md:flex items-center gap-3">
-            <Link
-              href="/login"
-              className="text-sm text-slate-400 hover:text-white transition-colors px-3 py-1.5 font-medium"
-            >
-              Sign In
-            </Link>
-            <Link href="/signup">
-              <motion.button
-                className="btn-primary px-4 py-2 rounded-xl text-white text-sm font-semibold"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
+          {!hideAuthActions && (
+            <div className="hidden md:flex items-center gap-3">
+              <Link
+                href="/login"
+                className="text-sm text-slate-400 hover:text-white transition-colors px-3 py-1.5 font-medium"
               >
-                Get Started
-              </motion.button>
-            </Link>
-          </div>
+                Sign In
+              </Link>
+              <Link href="/signup">
+                <motion.button
+                  className="btn-primary px-4 py-2 rounded-xl text-white text-sm font-semibold"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  Get Started
+                </motion.button>
+              </Link>
+            </div>
+          )}
 
           <button
             className="md:hidden text-slate-400 hover:text-white transition-colors"
@@ -143,27 +150,31 @@ export default function Navbar() {
                     {item.label}
                   </Link>
                 ))}
-                <Link
-                  href="/agents"
-                  className="block text-slate-400 hover:text-white py-2 text-sm font-medium transition-colors"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  Agents
-                </Link>
-                <div className="pt-2 flex gap-3">
+                {showAgentsLink && (
                   <Link
-                    href="/login"
-                    className="text-sm text-slate-400 hover:text-white transition-colors font-medium"
+                    href="/agents"
+                    className="block text-slate-400 hover:text-white py-2 text-sm font-medium transition-colors"
                     onClick={() => setMobileOpen(false)}
                   >
-                    Sign In
+                    Agents
                   </Link>
-                  <Link href="/signup" onClick={() => setMobileOpen(false)}>
-                    <button className="btn-primary px-4 py-2 rounded-xl text-white text-sm font-semibold">
-                      Get Started
-                    </button>
-                  </Link>
-                </div>
+                )}
+                {!hideAuthActions && (
+                  <div className="pt-2 flex gap-3">
+                    <Link
+                      href="/login"
+                      className="text-sm text-slate-400 hover:text-white transition-colors font-medium"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Sign In
+                    </Link>
+                    <Link href="/signup" onClick={() => setMobileOpen(false)}>
+                      <button className="btn-primary px-4 py-2 rounded-xl text-white text-sm font-semibold">
+                        Get Started
+                      </button>
+                    </Link>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
