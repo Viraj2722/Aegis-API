@@ -22,7 +22,11 @@ export default function ProtectedRoute({ children, allowUnauthed = false }) {
       hasFromLocation = !!params.get("agent_key") || !!params.get("secret_key");
     }
 
-    setUrlHasAgentKey(hasFromHook || hasFromLocation);
+    const hasFromStorage =
+      typeof window !== "undefined" &&
+      !!(localStorage.getItem("aegis_agent_key") || "").trim();
+
+    setUrlHasAgentKey(hasFromHook || hasFromLocation || hasFromStorage);
     setQueryReady(true);
   }, [searchParams]);
 

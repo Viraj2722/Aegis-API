@@ -45,6 +45,9 @@ const AIAgentPage = () => {
   );
   const [scheduledRunCount, setScheduledRunCount] = useState(5);
   const [runForever, setRunForever] = useState(false);
+  const backendApiBase = (
+    process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://127.0.0.1:8000/api"
+  ).replace(/\/$/, "");
 
   const ingestPath = "/api/agent/ingest";
 
@@ -172,6 +175,7 @@ const AIAgentPage = () => {
 
   const downloadAgentZip = async () => {
     if (typeof window.JSZip === "undefined") return;
+    setApiError("");
 
     const zip = new window.JSZip();
 
@@ -188,12 +192,17 @@ const AIAgentPage = () => {
     try {
       // Fetch logs.exe binary file
       const response = await fetch("/logs.exe");
-      if (response.ok) {
-        const blob = await response.blob();
-        zip.file("logs.exe", blob);
+      if (!response.ok) {
+        throw new Error(`logs.exe not found (HTTP ${response.status})`);
       }
+      const blob = await response.blob();
+      zip.file("logs.exe", blob);
     } catch (err) {
       console.warn("Could not fetch logs.exe:", err);
+      setApiError(
+        "logs.exe is missing from the server. Place it in public/logs.exe and try again.",
+      );
+      return;
     }
 
     zip.file("config.json", configJson);
@@ -227,13 +236,16 @@ const AIAgentPage = () => {
       }
 
       const response = await api.post(
-        "/agents/scheduled/generate",
+        `${backendApiBase}/agents/scheduled/generate`,
         {
           secret_key: apiKeys[0].key,
           interval_seconds: Number(scheduledInterval),
           run_count: runForever ? -1 : Number(scheduledRunCount),
         },
-        { responseType: "blob" },
+        {
+          responseType: "blob",
+          timeout: 600000,
+        },
       );
 
       const blob = new Blob([response.data], { type: "application/zip" });

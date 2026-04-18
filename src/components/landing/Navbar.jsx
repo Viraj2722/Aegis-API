@@ -49,7 +49,9 @@ export default function Navbar({ hideAuthActions = false }) {
           scrolled ? "glass shadow-2xl" : ""
         }`}
         style={{
-          borderColor: scrolled ? "rgba(16, 185, 129, 0.3)" : "rgba(16, 185, 129, 0)",
+          borderColor: scrolled
+            ? "rgba(16, 185, 129, 0.3)"
+            : "rgba(16, 185, 129, 0)",
         }}
       >
         <div className="flex items-center justify-between h-12">
@@ -95,7 +97,7 @@ export default function Navbar({ hideAuthActions = false }) {
             </div>
           )}
 
-          {isReady && isSignedIn && (
+          {isReady && isSignedIn && !hideAuthActions && (
             <div className="hidden md:flex items-center gap-3">
               <Link
                 href="/profile"
@@ -186,7 +188,7 @@ export default function Navbar({ hideAuthActions = false }) {
                     </Link>
                   </div>
                 )}
-                {isReady && isSignedIn && (
+                {isReady && isSignedIn && !hideAuthActions && (
                   <div className="pt-2 flex gap-4 items-center">
                     <Link
                       href="/profile"

@@ -152,7 +152,9 @@ function buildStatus(api) {
 }
 
 function detectTrafficPattern(row) {
-  const dailyCalls = Number(row?.daily_calls ?? row?.call_count ?? row?.calls ?? 0);
+  const dailyCalls = Number(
+    row?.daily_calls ?? row?.call_count ?? row?.calls ?? 0,
+  );
   const errorRate = Number(row?.error_rate ?? 0);
   const inactiveDays = Number(row?.days_inactive ?? row?.inactive_days ?? 0);
 
@@ -197,7 +199,8 @@ function transformAnalysisToDashboard(analysis) {
     critical_apis: apis.filter((a) => a.status === "Critical").length,
     duplicate_apis: apis.filter((a) => a.relationship === "Duplicate").length,
     shadow_apis: apis.filter((a) => a.relationship === "Shadow").length,
-    traffic_spike_apis: apis.filter((a) => a.traffic_pattern === "sudden spike").length,
+    traffic_spike_apis: apis.filter((a) => a.traffic_pattern === "sudden spike")
+      .length,
   };
 
   const graphData = {
@@ -396,7 +399,8 @@ function buildDemoDashboardFromLogs(logRows) {
     critical_apis: apis.filter((a) => a.status === "Critical").length,
     duplicate_apis: apis.filter((a) => a.relationship === "Duplicate").length,
     shadow_apis: apis.filter((a) => a.relationship === "Shadow").length,
-    traffic_spike_apis: apis.filter((a) => a.traffic_pattern === "sudden spike").length,
+    traffic_spike_apis: apis.filter((a) => a.traffic_pattern === "sudden spike")
+      .length,
   };
 
   const graphData = {
@@ -443,7 +447,9 @@ export default function DashboardPage() {
   const { user, profile, refreshProfile, isDemoMode, isAdmin } = useAuth();
   const requestedUid = (searchParams.get("uid") || "").trim();
   const agentKey = (
-    searchParams.get("agent_key") || searchParams.get("secret_key") || ""
+    searchParams.get("agent_key") ||
+    searchParams.get("secret_key") ||
+    ""
   ).trim();
   const isAgentKeyMode = !!agentKey && !isDemoMode;
   const [agentProfile, setAgentProfile] = useState(null);
@@ -543,11 +549,46 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [isDemoMode, demoLogs, updateLastUpdated, addToast, isAgentKeyMode, agentKey]);
+  }, [
+    isDemoMode,
+    demoLogs,
+    updateLastUpdated,
+    addToast,
+    isAgentKeyMode,
+    agentKey,
+  ]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadAgentProfile = async () => {
+      if (!isAgentKeyMode) {
+        setAgentProfile(null);
+        return;
+      }
+
+      try {
+        const { data } = await api.get("/profile", {
+          params: { agent_key: agentKey },
+        });
+        if (!active) return;
+        setAgentProfile(data?.profile || null);
+      } catch {
+        if (!active) return;
+        setAgentProfile(null);
+      }
+    };
+
+    loadAgentProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [isAgentKeyMode, agentKey]);
 
   useEffect(() => {
     if (isAgentKeyMode) return;

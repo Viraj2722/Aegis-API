@@ -6,6 +6,7 @@ import { supabase } from "../utils/supabaseClient";
 const AuthContext = createContext(null);
 const TOKEN_KEY = "aegis_token";
 const DEMO_TOKEN = "demo_token";
+const AGENT_KEY_STORAGE = "aegis_agent_key";
 const DEMO_USER = {
   id: "demo-user",
   name: "Demo User",
@@ -20,6 +21,37 @@ const DEMO_PROFILE = {
   avatar_url: null,
   is_admin: false,
 };
+const AGENT_GUEST_USER = {
+  id: "agent-guest",
+  name: "Agent Viewer",
+  email: "agent-guest@aegisapi.local",
+  avatar_url: null,
+};
+const AGENT_GUEST_PROFILE = {
+  id: "agent-guest",
+  full_name: "Agent Viewer",
+  role: "Guest",
+  country: "N/A",
+  avatar_url: null,
+  is_admin: false,
+};
+
+function hasAgentKeyInUrl() {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search || "");
+  return !!params.get("agent_key") || !!params.get("secret_key");
+}
+
+function getAgentKeyFromUrl() {
+  if (typeof window === "undefined") return "";
+  const params = new URLSearchParams(window.location.search || "");
+  return (params.get("agent_key") || params.get("secret_key") || "").trim();
+}
+
+function getStoredAgentKey() {
+  if (typeof window === "undefined") return "";
+  return (localStorage.getItem(AGENT_KEY_STORAGE) || "").trim();
+}
 
 function mapSupabaseUser(rawUser) {
   if (!rawUser) return null;
@@ -107,6 +139,8 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [isAdminClaim, setIsAdminClaim] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [isAgentGuestMode, setIsAgentGuestMode] = useState(false);
+  const [agentKey, setAgentKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isReady, setIsReady] = useState(false);
@@ -139,7 +173,10 @@ export function AuthProvider({ children }) {
       setUser(mappedUser);
       setIsDemoMode(false);
       setIsAdminClaim(isAdminFromUserClaims(data.session?.user));
+      setIsAgentGuestMode(false);
+      setAgentKey("");
       if (mappedUser) {
+        localStorage.removeItem(AGENT_KEY_STORAGE);
         localStorage.removeItem(TOKEN_KEY);
         upsertProfile(data.session.user).catch(() => {
           // Profile write can fail if RLS policies are not configured yet.
@@ -151,7 +188,25 @@ export function AuthProvider({ children }) {
           .single();
         setProfile(mapProfileRow(profileData));
       } else {
-        setProfile(null);
+        const keyFromUrl = getAgentKeyFromUrl();
+        const storedKey = getStoredAgentKey();
+        const resolvedAgentKey = (keyFromUrl || storedKey || "").trim();
+
+        if (resolvedAgentKey) {
+          localStorage.setItem(AGENT_KEY_STORAGE, resolvedAgentKey);
+          setAgentKey(resolvedAgentKey);
+          setUser(AGENT_GUEST_USER);
+          setProfile(AGENT_GUEST_PROFILE);
+          setIsDemoMode(false);
+          setIsAdminClaim(false);
+          setIsAgentGuestMode(true);
+        } else {
+          localStorage.removeItem(AGENT_KEY_STORAGE);
+          setUser(null);
+          setProfile(null);
+          setIsAgentGuestMode(false);
+          setAgentKey("");
+        }
       }
       setIsReady(true);
     };
@@ -172,6 +227,9 @@ export function AuthProvider({ children }) {
 
       if (mappedUser) {
         setIsDemoMode(false);
+        setIsAgentGuestMode(false);
+        setAgentKey("");
+        localStorage.removeItem(AGENT_KEY_STORAGE);
         localStorage.removeItem(TOKEN_KEY);
         upsertProfile(session.user).catch(() => {
           // Profile write can fail if RLS policies are not configured yet.
@@ -193,10 +251,31 @@ export function AuthProvider({ children }) {
           setProfile(DEMO_PROFILE);
           setIsAdminClaim(false);
           setIsDemoMode(true);
+          setIsAgentGuestMode(false);
+          setAgentKey("");
+          localStorage.removeItem(AGENT_KEY_STORAGE);
         } else {
-          setProfile(null);
-          setIsAdminClaim(false);
-          setIsDemoMode(false);
+          const keyFromUrl = getAgentKeyFromUrl();
+          const storedKey = getStoredAgentKey();
+          const resolvedAgentKey = (keyFromUrl || storedKey || "").trim();
+
+          if (resolvedAgentKey) {
+            localStorage.setItem(AGENT_KEY_STORAGE, resolvedAgentKey);
+            setAgentKey(resolvedAgentKey);
+            setUser(AGENT_GUEST_USER);
+            setProfile(AGENT_GUEST_PROFILE);
+            setIsAdminClaim(false);
+            setIsDemoMode(false);
+            setIsAgentGuestMode(true);
+          } else {
+            setUser(null);
+            setProfile(null);
+            setIsAdminClaim(false);
+            setIsDemoMode(false);
+            setIsAgentGuestMode(false);
+            setAgentKey("");
+            localStorage.removeItem(AGENT_KEY_STORAGE);
+          }
         }
       }
 
@@ -374,7 +453,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    if (!isDemoMode) {
+    if (!isDemoMode && !isAgentGuestMode) {
       try {
         const {
           data: { session },
@@ -406,6 +485,8 @@ export function AuthProvider({ children }) {
     setProfile(null);
     setIsAdminClaim(false);
     setIsDemoMode(false);
+    setIsAgentGuestMode(false);
+    setAgentKey("");
     setError(null);
   };
 
@@ -414,6 +495,8 @@ export function AuthProvider({ children }) {
       user,
       profile,
       isDemoMode,
+      isAgentGuestMode,
+      agentKey,
       isAdmin,
       loading,
       error,
@@ -431,6 +514,8 @@ export function AuthProvider({ children }) {
       user,
       profile,
       isDemoMode,
+      isAgentGuestMode,
+      agentKey,
       isAdmin,
       isAdminClaim,
       loading,
