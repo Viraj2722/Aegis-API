@@ -1070,6 +1070,21 @@ async def get_alerts(user_id: str = Depends(resolve_user_id_for_read)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/profile")
+async def get_profile(
+    user_id: str = Depends(resolve_user_id_for_read),
+):
+    """Fetch profile details for the resolved user, including agent-key redirected sessions."""
+    try:
+        profile = SupabaseOps.get_user_profile(user_id)
+        if not profile:
+            return {"profile": None}
+        return {"profile": profile}
+    except Exception as e:
+        print(f"Profile fetch error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/health")
 def health_check():
     """Health check endpoint"""

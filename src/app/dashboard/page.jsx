@@ -108,6 +108,9 @@ const DEMO_LOGS = [
   {
     api: "/api/internal/debug",
     method: "GET",
+      if (isAgentKeyMode) {
+        setAgentProfile(profileRes?.data?.profile || null);
+      }
     response_code: 200,
     response_time: 690,
     payload_size: 2300,
@@ -305,7 +308,7 @@ function buildSimulationData(rawApis, rawEdges) {
   return {
     apis,
     edges: inferredEdges,
-  };
+                  {displayName}
 }
 
 function buildDemoDashboardFromLogs(logRows) {
@@ -318,6 +321,12 @@ function buildDemoDashboardFromLogs(logRows) {
     if (!endpoint) continue;
     const method = String(row.method || "GET").toUpperCase();
     const key = `${method} ${endpoint}`;
+              {displayProfile && (
+                <p className="text-xs text-slate-500 mt-1">
+                  {displayProfile.role || "Role unavailable"}
+                  {displayProfile.country ? ` • ${displayProfile.country}` : ""}
+                </p>
+              )}
     const ts = new Date(row.timestamp || now).getTime();
     const responseCode = Number(row.response_code ?? 200);
     const responseTime = Number(row.response_time ?? 0);
@@ -446,6 +455,7 @@ export default function DashboardPage() {
     searchParams.get("agent_key") || searchParams.get("secret_key") || ""
   ).trim();
   const isAgentKeyMode = !!agentKey && !isDemoMode;
+  const [agentProfile, setAgentProfile] = useState(null);
   const uploadInputRef = useRef(null);
   const [demoLogs, setDemoLogs] = useState(DEMO_LOGS);
   const [apis, setApis] = useState([]);

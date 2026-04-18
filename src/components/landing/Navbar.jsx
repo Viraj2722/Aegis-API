@@ -53,7 +53,7 @@ export default function Navbar({ hideAuthActions = false }) {
         }}
       >
         <div className="flex items-center justify-between h-12">
-          <BrandLogo size="sm" href={isSignedIn ? "/dashboard" : "/"} />
+          <BrandLogo size="sm" href="/" />
 
           <div className="hidden md:flex items-center gap-8 text-sm text-slate-400">
             {navLinks.map((item) => (

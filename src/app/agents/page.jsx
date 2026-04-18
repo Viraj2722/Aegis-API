@@ -12,10 +12,12 @@ import {
   Terminal,
   Loader2,
   AlertCircle,
+  LogOut,
 } from "lucide-react";
 import Navbar from "../../components/landing/Navbar";
 import api from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
+import { useRouter } from "next/navigation";
 
 const AIAgentPage = () => {
   const SCHEDULE_OPTIONS = [
@@ -25,7 +27,8 @@ const AIAgentPage = () => {
     { label: "7 days", seconds: 604800 },
   ];
 
-  const { user, isDemoMode } = useAuth();
+  const { user, isDemoMode, logout } = useAuth();
+  const router = useRouter();
   const [apiKeys, setApiKeys] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingKeys, setIsLoadingKeys] = useState(false);
@@ -259,6 +262,11 @@ const AIAgentPage = () => {
     link.click();
   };
 
+  const handleSignOut = async () => {
+    await logout();
+    router.replace("/login");
+  };
+
   return (
     <div className="min-h-screen bg-black cyber-grid text-slate-300 font-sans">
       <Navbar hideAuthActions />
@@ -276,6 +284,13 @@ const AIAgentPage = () => {
                 processed security signatures to the dashboard in real-time.
               </p>
             </div>
+            <button
+              onClick={handleSignOut}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-colors text-sm font-medium"
+            >
+              <LogOut size={14} />
+              Sign out
+            </button>
           </div>
         </section>
 
