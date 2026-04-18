@@ -12,16 +12,20 @@ import {
   Terminal,
   Loader2,
   AlertCircle,
-  LogOut,
 } from "lucide-react";
 import Navbar from "../../components/landing/Navbar";
 import api from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
-import { useRouter } from "next/navigation";
 
 const AIAgentPage = () => {
-  const { user, isDemoMode, logout } = useAuth();
-  const router = useRouter();
+  const SCHEDULE_OPTIONS = [
+    { label: "6 hours", seconds: 21600 },
+    { label: "12 hours", seconds: 43200 },
+    { label: "24 hours", seconds: 86400 },
+    { label: "7 days", seconds: 604800 },
+  ];
+
+  const { user, isDemoMode } = useAuth();
   const [apiKeys, setApiKeys] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingKeys, setIsLoadingKeys] = useState(false);
@@ -29,8 +33,23 @@ const AIAgentPage = () => {
   const [copiedKey, setCopiedKey] = useState(null);
   const [isZipLoading, setIsZipLoading] = useState(true);
   const [zipError, setZipError] = useState(false);
+  const [scheduledInterval, setScheduledInterval] = useState(86400);
+  const [scheduledError, setScheduledError] = useState("");
+  const [isScheduledGenerating, setIsScheduledGenerating] = useState(false);
+  const [scheduledZipUrl, setScheduledZipUrl] = useState("");
+  const [scheduledZipName, setScheduledZipName] = useState("scheduled-agent.zip");
+  const [scheduledRunCount, setScheduledRunCount] = useState(5);
+  const [runForever, setRunForever] = useState(false);
 
   const ingestPath = "/api/agent/ingest";
+
+  useEffect(() => {
+    return () => {
+      if (scheduledZipUrl) {
+        window.URL.revokeObjectURL(scheduledZipUrl);
+      }
+    };
+  }, [scheduledZipUrl]);
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -153,6 +172,7 @@ const AIAgentPage = () => {
       {
         secret_key:
           apiKeys.length > 0 ? apiKeys[0].key : "YOUR_SECRET_KEY_HERE",
+        api_key: apiKeys.length > 0 ? apiKeys[0].key : "YOUR_API_KEY_HERE",
         log_path: "/var/log/nginx/access.log",
       },
       null,
@@ -181,9 +201,57 @@ const AIAgentPage = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleSignOut = async () => {
-    await logout();
-    router.replace("/login");
+  const handleGenerateScheduledAgent = async () => {
+    setScheduledError("");
+    setIsScheduledGenerating(true);
+
+    try {
+      if (!user?.id || isDemoMode) {
+        throw new Error("Sign in with a real account to generate scheduled agents");
+      }
+      if (apiKeys.length === 0 || !apiKeys[0].key) {
+        throw new Error("Create an API key first");
+      }
+
+      if (scheduledZipUrl) {
+        window.URL.revokeObjectURL(scheduledZipUrl);
+        setScheduledZipUrl("");
+      }
+
+      const response = await api.post(
+        "/agents/scheduled/generate",
+        {
+          secret_key: apiKeys[0].key,
+          interval_seconds: Number(scheduledInterval),
+          run_count: runForever ? -1 : Number(scheduledRunCount),
+        },
+        { responseType: "blob" },
+      );
+
+      const blob = new Blob([response.data], { type: "application/zip" });
+      const url = window.URL.createObjectURL(blob);
+      setScheduledZipUrl(url);
+
+      const disposition = response?.headers?.["content-disposition"] || "";
+      const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
+      setScheduledZipName(match?.[1] || "scheduled-agent.zip");
+    } catch (err) {
+      setScheduledError(
+        err?.response?.data?.detail ||
+          err?.message ||
+          "Unable to generate scheduled agent",
+      );
+    } finally {
+      setIsScheduledGenerating(false);
+    }
+  };
+
+  const handleDownloadScheduledAgent = () => {
+    if (!scheduledZipUrl) return;
+    const link = document.createElement("a");
+    link.href = scheduledZipUrl;
+    link.download = scheduledZipName || "scheduled-agent.zip";
+    link.click();
   };
 
   return (
@@ -203,24 +271,52 @@ const AIAgentPage = () => {
                 signatures to the dashboard in real-time.
               </p>
             </div>
-
-            {user && (
-              <button
-                onClick={handleSignOut}
-                className="px-4 py-2 border border-red-500/30 rounded-lg text-red-300 hover:bg-red-500/10 inline-flex items-center gap-2 text-sm"
-              >
-                <LogOut size={14} />
-                Sign out
-              </button>
-            )}
           </div>
         </section>
 
         <div className="glass neon-border rounded-xl p-8 space-y-6">
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-bold text-white">
-              Step 1: Download Agent
+              Step 1: Select Scan Interval & Download Agent
             </h2>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-slate-400">Scan Interval</p>
+            <select
+              value={scheduledInterval}
+              onChange={(event) => setScheduledInterval(Number(event.target.value))}
+              className="w-full md:w-64 bg-black/60 border border-emerald-500/20 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
+            >
+              {SCHEDULE_OPTIONS.map((option) => (
+                <option key={option.seconds} value={option.seconds}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-slate-400">Number Of Scheduled Scans</p>
+            <select
+              disabled={runForever}
+              value={scheduledRunCount}
+              onChange={(event) => setScheduledRunCount(Number(event.target.value))}
+              className="w-full md:w-64 bg-black/60 border border-emerald-500/20 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value={5}>5 scans</option>
+              <option value={10}>10 scans</option>
+            </select>
+            <label className="inline-flex items-center gap-2 text-xs text-slate-300 ml-2">
+              <input
+                type="checkbox"
+                checked={runForever}
+                onChange={(event) => setRunForever(event.target.checked)}
+                className="accent-emerald-500"
+              />
+              Run forever
+            </label>
+            <p className="text-[11px] text-slate-500">When enabled, the generated scheduled agent runs continuously.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -280,6 +376,37 @@ const AIAgentPage = () => {
               </>
             )}
           </button>
+
+          <div className="pt-2 space-y-3">
+            <p className="text-sm font-semibold text-slate-400">Scheduled Agent</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={handleGenerateScheduledAgent}
+                disabled={isScheduledGenerating || apiKeys.length === 0}
+                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isScheduledGenerating ? "Generating..." : "Generate Scheduled Agent"}
+              </button>
+
+              <button
+                onClick={handleDownloadScheduledAgent}
+                disabled={!scheduledZipUrl}
+                className="px-6 py-2.5 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10 rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Download Scheduled Agent
+              </button>
+            </div>
+
+            {apiKeys.length === 0 ? (
+              <p className="text-xs text-amber-300">Create an API key first before generating scheduled agent.</p>
+            ) : null}
+
+            {scheduledError ? (
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 text-xs px-3 py-2">
+                {scheduledError}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div className="glass rounded-xl border border-emerald-500/20 p-8">
@@ -397,6 +524,9 @@ const AIAgentPage = () => {
               "secret_key":{" "}
               <span className="text-cyan-400">"&lt;your_secret_key&gt;"</span>
               <br />
+              "api_key":{" "}
+              <span className="text-cyan-400">"&lt;your_api_key&gt;"</span>
+              <br />
               "log_path":{" "}
               <span className="text-cyan-400">"/path/to/logs.json"</span>
             </div>
@@ -416,6 +546,7 @@ const AIAgentPage = () => {
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

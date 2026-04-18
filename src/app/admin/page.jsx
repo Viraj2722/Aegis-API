@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   Flame,
   Database,
+  ShieldCheck,
   Bell,
   LogOut,
   X,
@@ -54,7 +55,7 @@ function Navbar({ setHelpOpen, onSignOut }) {
     <header className="sticky top-0 z-50 border-b border-slate-800/50 bg-[#050a14]/90 backdrop-blur-lg">
       <div className="max-w-[1400px] mx-auto px-8 lg:px-12 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <BrandLogo size="sm" />
+          <BrandLogo size="sm" href="/admin" />
         </div>
 
         <div className="flex items-center gap-3">
@@ -316,7 +317,7 @@ function AdminDashboardContent() {
 // Helper function to get auth token
 async function getAuthToken() {
   try {
-    const { data } = await (await import("../../lib/supabase-client")).supabase.auth.getSession();
+    const { data } = await (await import("../../utils/supabaseClient")).supabase.auth.getSession();
     return data?.session?.access_token;
   } catch {
     return null;

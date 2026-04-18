@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import BrandLogo from "../BrandLogo";
+import { useAuth } from "../../context/AuthContext";
 
 const navLinks = [
   { label: "Features", href: "/#features" },
@@ -17,7 +19,15 @@ export default function Navbar({ hideAuthActions = false }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, isReady, logout } = useAuth();
   const showAgentsLink = pathname !== "/agents";
+  const isSignedIn = !!user;
+
+  const handleSignOut = async () => {
+    await logout();
+    router.replace("/");
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -35,12 +45,15 @@ export default function Navbar({ hideAuthActions = false }) {
       }`}
     >
       <div
-        className={`mx-auto max-w-6xl px-6 rounded-2xl transition-all duration-500 ${
-          scrolled ? "glass neon-border shadow-2xl" : ""
+        className={`mx-auto max-w-6xl px-6 rounded-2xl neon-border transition-all duration-500 ${
+          scrolled ? "glass shadow-2xl" : ""
         }`}
+        style={{
+          borderColor: scrolled ? "rgba(16, 185, 129, 0.3)" : "rgba(16, 185, 129, 0)",
+        }}
       >
         <div className="flex items-center justify-between h-12">
-          <BrandLogo size="sm" />
+          <BrandLogo size="sm" href={isSignedIn ? "/dashboard" : "/"} />
 
           <div className="hidden md:flex items-center gap-8 text-sm text-slate-400">
             {navLinks.map((item) => (
@@ -62,7 +75,7 @@ export default function Navbar({ hideAuthActions = false }) {
             )}
           </div>
 
-          {!hideAuthActions && (
+          {isReady && !isSignedIn && !hideAuthActions && (
             <div className="hidden md:flex items-center gap-3">
               <Link
                 href="/login"
@@ -79,6 +92,23 @@ export default function Navbar({ hideAuthActions = false }) {
                   Get Started
                 </motion.button>
               </Link>
+            </div>
+          )}
+
+          {isReady && isSignedIn && (
+            <div className="hidden md:flex items-center gap-3">
+              <Link
+                href="/profile"
+                className="text-sm text-slate-300 hover:text-white transition-colors px-3 py-1.5 font-medium"
+              >
+                Profile
+              </Link>
+              <button
+                onClick={handleSignOut}
+                className="text-sm text-red-300 hover:text-red-200 transition-colors px-3 py-1.5 font-medium border border-red-500/30 rounded-xl hover:bg-red-500/10"
+              >
+                Sign out
+              </button>
             </div>
           )}
 
@@ -140,7 +170,7 @@ export default function Navbar({ hideAuthActions = false }) {
                     Agents
                   </Link>
                 )}
-                {!hideAuthActions && (
+                {isReady && !isSignedIn && !hideAuthActions && (
                   <div className="pt-2 flex gap-3">
                     <Link
                       href="/login"
@@ -154,6 +184,26 @@ export default function Navbar({ hideAuthActions = false }) {
                         Get Started
                       </button>
                     </Link>
+                  </div>
+                )}
+                {isReady && isSignedIn && (
+                  <div className="pt-2 flex gap-4 items-center">
+                    <Link
+                      href="/profile"
+                      className="text-sm text-slate-300 hover:text-white transition-colors font-medium"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Profile
+                    </Link>
+                    <button
+                      className="text-sm text-red-300 hover:text-red-200 transition-colors font-medium"
+                      onClick={async () => {
+                        setMobileOpen(false);
+                        await handleSignOut();
+                      }}
+                    >
+                      Sign out
+                    </button>
                   </div>
                 )}
               </div>

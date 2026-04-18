@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Header, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from risk_detector import RiskDetectionModel
 from supabase_ops import SupabaseOps
 import pandas as pd
@@ -13,6 +13,12 @@ import json
 import re
 import urllib.request
 import urllib.error
+from urllib.parse import urlparse
+import subprocess
+import tempfile
+import shutil
+import sys
+import zipfile
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
@@ -117,6 +123,134 @@ class AgentCreateRequest(BaseModel):
 class AgentIngestRequest(BaseModel):
     secret_key: str
     logs: List[Dict[str, Any]]
+
+
+class ScheduledAgentRequest(BaseModel):
+    secret_key: str
+    interval_seconds: int
+    run_count: int = 1
+
+
+def _build_scheduled_logs_source(interval_seconds: int, run_count: int, server_url: str = "http://localhost:8000") -> str:
+    # Embed the correct server URL into executable source.
+    ingest_url = f"{server_url}/api/agent/ingest?redirect=false"
+    return f'''import json
+import os
+import sys
+import time
+import requests
+from typing import Any, Dict, List
+
+AGENT_SERVER_URL = "{ingest_url}"
+INTERVAL_SECONDS = {interval_seconds}
+MAX_RUNS = {run_count}
+
+BASE_DIR = (
+    os.path.dirname(sys.executable)
+    if getattr(sys, "frozen", False)
+    else os.path.dirname(os.path.abspath(__file__))
+)
+
+
+def load_config() -> Dict[str, Any]:
+    for name in ("config.json", "data.json"):
+        config_path = os.path.join(BASE_DIR, name)
+        if os.path.exists(config_path):
+            with open(config_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+    raise FileNotFoundError("config.json or data.json not found")
+
+
+def load_raw_logs(path: str) -> List[Dict[str, Any]]:
+    full_path = path if os.path.isabs(path) else os.path.join(BASE_DIR, path)
+    if not os.path.exists(full_path):
+        raise FileNotFoundError(f"{{path}} not found")
+    with open(full_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def normalize_logs(logs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    normalized = []
+    aliases = {{
+        "api": ["api", "path", "endpoint", "url", "uri", "route"],
+        "method": ["method", "http_method", "verb"],
+        "response_code": ["response_code", "status_code", "status"],
+        "response_time": ["response_time", "latency", "duration"],
+        "payload_size": ["payload_size", "bytes", "size"],
+        "timestamp": ["timestamp", "time", "date"],
+    }}
+
+    for log in logs:
+        row = {{}}
+        for canonical, keys in aliases.items():
+            value = None
+            for key in keys:
+                if key in log:
+                    value = log[key]
+                    break
+            row[canonical] = value
+
+        row["api"] = str(row.get("api") or "").strip()
+        row["method"] = str(row.get("method") or "GET").upper()
+
+        try:
+            row["response_code"] = int(row.get("response_code") or 200)
+        except Exception:
+            row["response_code"] = 200
+
+        try:
+            row["response_time"] = float(row.get("response_time") or 0)
+        except Exception:
+            row["response_time"] = 0.0
+
+        try:
+            row["payload_size"] = float(row.get("payload_size") or 0)
+        except Exception:
+            row["payload_size"] = 0.0
+
+        row["timestamp"] = row.get("timestamp") or ""
+        if row["api"]:
+            normalized.append(row)
+
+    return normalized
+
+
+def send_to_agent(secret_key: str, normalized_logs: List[Dict[str, Any]]) -> None:
+    payload = {{
+        "secret_key": secret_key,
+        "logs": normalized_logs,
+    }}
+    response = requests.post(AGENT_SERVER_URL, json=payload, timeout=120)
+    if response.status_code >= 400:
+        raise RuntimeError(f"Server error {{response.status_code}}: {{response.text}}")
+
+
+def run_scan() -> None:
+    config = load_config()
+    secret_key = config.get("secret_key") or config.get("secret-key") or config.get("api_key")
+    log_path = config.get("log_path") or config.get("log_file_path")
+    if not secret_key or not log_path:
+        raise ValueError("config missing secret_key and/or log_path")
+
+    raw_logs = load_raw_logs(log_path)
+    normalized = normalize_logs(raw_logs)
+    if not normalized:
+        return
+    send_to_agent(secret_key, normalized)
+
+
+if __name__ == "__main__":
+    runs = 0
+    while MAX_RUNS <= 0 or runs < MAX_RUNS:
+        try:
+            run_scan()
+        except Exception:
+            pass
+        runs += 1
+        if MAX_RUNS > 0 and runs >= MAX_RUNS:
+            break
+        time.sleep(INTERVAL_SECONDS)
+'''
 
 
 def _detect_traffic_pattern(row: Dict[str, Any]) -> str:
@@ -637,6 +771,100 @@ async def ingest_agent_logs(payload: AgentIngestRequest, redirect: bool = Query(
     except Exception as e:
         print(f"Agent ingest error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/agents/scheduled/generate")
+async def generate_scheduled_agent(payload: ScheduledAgentRequest, user_id: str = Depends(get_user_id)):
+    """Generate scheduled logs.exe and return zip with logs.exe + config.json."""
+    allowed_intervals = {21600, 43200, 86400, 604800}
+    interval_seconds = int(payload.interval_seconds)
+    run_count = int(payload.run_count)
+    if interval_seconds not in allowed_intervals:
+        raise HTTPException(status_code=400, detail="Unsupported interval")
+    if run_count == 0 or run_count < -1:
+        raise HTTPException(status_code=400, detail="run_count must be -1 or a positive integer")
+
+    secret_key = (payload.secret_key or "").strip()
+    if not secret_key:
+        raise HTTPException(status_code=400, detail="secret_key is required")
+
+    agent = SupabaseOps.get_agent_by_secret(secret_key)
+    if not agent:
+        raise HTTPException(status_code=401, detail="Invalid secret key")
+    if str(agent.get("user_id") or "") != user_id:
+        raise HTTPException(status_code=403, detail="Secret key does not belong to current user")
+
+    temp_root = Path(tempfile.mkdtemp(prefix="aegis_scheduled_agent_"))
+    try:
+        script_path = temp_root / "logs.py"
+        dist_dir = temp_root / "dist"
+        build_dir = temp_root / "build"
+        spec_dir = temp_root / "spec"
+        dist_dir.mkdir(parents=True, exist_ok=True)
+        build_dir.mkdir(parents=True, exist_ok=True)
+        spec_dir.mkdir(parents=True, exist_ok=True)
+
+        # Extract base URL from dashboard_url (e.g., "http://192.168.1.169:3000" from "http://192.168.1.169:3000/dashboard/user/uuid")
+        dashboard_url = (agent.get("dashboard_url") or "http://localhost:8000").strip()
+        parsed = urlparse(dashboard_url)
+        server_url = f"{parsed.scheme}://{parsed.netloc}"
+
+        script_path.write_text(_build_scheduled_logs_source(interval_seconds, run_count, server_url), encoding="utf-8")
+
+        build_cmd = [
+            sys.executable,
+            "-m",
+            "PyInstaller",
+            "--onefile",
+            "--name",
+            "logs",
+            str(script_path),
+            "--distpath",
+            str(dist_dir),
+            "--workpath",
+            str(build_dir),
+            "--specpath",
+            str(spec_dir),
+        ]
+
+        process = subprocess.run(
+            build_cmd,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+        if process.returncode != 0:
+            snippet = (process.stderr or process.stdout or "PyInstaller failed")[-1200:]
+            raise HTTPException(status_code=500, detail=f"Scheduled agent build failed: {snippet}")
+
+        exe_path = dist_dir / "logs.exe"
+        if not exe_path.exists():
+            raise HTTPException(status_code=500, detail="Scheduled logs.exe was not generated")
+
+        config_payload = {
+            "secret_key": secret_key,
+            "api_key": secret_key,
+            "log_path": "/var/log/nginx/access.log",
+            "scan_interval_seconds": interval_seconds,
+            "max_scan_runs": run_count,
+        }
+        config_path = temp_root / "config.json"
+        config_path.write_text(json.dumps(config_payload, indent=2), encoding="utf-8")
+
+        zip_path = temp_root / "scheduled-agent.zip"
+        with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.write(exe_path, arcname="logs.exe")
+            zf.write(config_path, arcname="config.json")
+
+        zip_bytes = zip_path.read_bytes()
+        return Response(
+            content=zip_bytes,
+            media_type="application/zip",
+            headers={"Content-Disposition": "attachment; filename=scheduled-agent.zip"},
+        )
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
 
 @app.get("/api/analysis")
 async def get_analysis(user_id: str = Depends(get_user_id)):
