@@ -308,7 +308,6 @@ function buildSimulationData(rawApis, rawEdges) {
   return {
     apis,
     edges: inferredEdges,
-                  {displayName}
 }
 
 function buildDemoDashboardFromLogs(logRows) {
@@ -321,12 +320,6 @@ function buildDemoDashboardFromLogs(logRows) {
     if (!endpoint) continue;
     const method = String(row.method || "GET").toUpperCase();
     const key = `${method} ${endpoint}`;
-              {displayProfile && (
-                <p className="text-xs text-slate-500 mt-1">
-                  {displayProfile.role || "Role unavailable"}
-                  {displayProfile.country ? ` • ${displayProfile.country}` : ""}
-                </p>
-              )}
     const ts = new Date(row.timestamp || now).getTime();
     const responseCode = Number(row.response_code ?? 200);
     const responseTime = Number(row.response_time ?? 0);
@@ -583,10 +576,16 @@ export default function DashboardPage() {
     refreshProfile();
   }, [isDemoMode, isAgentKeyMode, refreshProfile]);
 
+  const displayProfile = isAgentKeyMode ? agentProfile : profile;
+  const displayName =
+    displayProfile?.full_name?.trim() ||
+    user?.name ||
+    (isAgentKeyMode ? "Agent View" : "User");
+
   const isProfileComplete =
     isDemoMode ||
     isAgentKeyMode ||
-    (!!profile?.role?.trim() && !!profile?.country?.trim());
+    (!!displayProfile?.role?.trim() && !!displayProfile?.country?.trim());
 
   useEffect(() => {
     let active = true;
@@ -727,7 +726,7 @@ export default function DashboardPage() {
               <p className="text-slate-400 text-sm mt-0.5">
                 Welcome back,{" "}
                 <span className="text-emerald-400 font-medium">
-                  {user?.name || (isAgentKeyMode ? "Agent View" : "User")}
+                  {displayName}
                 </span>
                 {isDemo() && (
                   <span className="ml-2 text-xs bg-cyan-500/15 text-cyan-400 border border-cyan-500/25 px-2 py-0.5 rounded-full">
@@ -740,6 +739,12 @@ export default function DashboardPage() {
                   </span>
                 )}
               </p>
+              {displayProfile && (
+                <p className="text-xs text-slate-500 mt-1">
+                  {displayProfile.role || "Role unavailable"}
+                  {displayProfile.country ? ` • ${displayProfile.country}` : ""}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <input
