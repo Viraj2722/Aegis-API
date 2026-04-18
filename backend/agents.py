@@ -1072,7 +1072,7 @@ async def get_alerts(user_id: str = Depends(resolve_user_id_for_read)):
 
 @app.get("/api/profile")
 async def get_profile(
-    user_id: str = Depends(resolve_user_id_for_read),
+    user_id: str = Depends(resolve_user_id_for_read),   
 ):
     """Fetch profile details for the resolved user, including agent-key redirected sessions."""
     try:
