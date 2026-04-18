@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Header, Depends, Query
+from fastapi import FastAPI, HTTPException, Header, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, Response
 from risk_detector import RiskDetectionModel
@@ -13,7 +13,7 @@ import json
 import re
 import urllib.request
 import urllib.error
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
 import subprocess
 import tempfile
 import shutil
@@ -111,13 +111,35 @@ def get_user_id(authorization: Optional[str] = Header(None)) -> str:
         raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
 
 
+def resolve_user_id_for_read(
+    authorization: Optional[str] = Header(None),
+    agent_key: Optional[str] = Query(None),
+    secret_key: Optional[str] = Query(None),
+) -> str:
+    """Resolve user from Bearer token first, or fallback to agent_key for redirected dashboard read access."""
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.replace("Bearer ", "", 1).strip()
+        try:
+            return SupabaseOps.get_user_id_from_token(token)
+        except Exception:
+            pass
+
+    key = (agent_key or secret_key or "").strip()
+    if key:
+        agent = SupabaseOps.get_agent_by_secret(key)
+        if agent and agent.get("user_id"):
+            return str(agent.get("user_id"))
+
+    raise HTTPException(status_code=401, detail="Missing or invalid authorization")
+
+
 class MitigationRequest(BaseModel):
     endpoint: str
     method: Optional[str] = None
 
 
 class AgentCreateRequest(BaseModel):
-    dashboard_url: str
+    dashboard_url: Optional[str] = None
 
 
 class AgentIngestRequest(BaseModel):
@@ -131,17 +153,52 @@ class ScheduledAgentRequest(BaseModel):
     run_count: int = 1
 
 
+def _is_loopback_host(hostname: str) -> bool:
+    host = (hostname or "").strip().lower()
+    return host in {"localhost", "127.0.0.1", "::1"} or host.startswith("127.")
+
+
+def _get_dashboard_origin(request: Request) -> str:
+    explicit = (
+        os.getenv("AGENT_DASHBOARD_BASE_URL")
+        or os.getenv("AGENT_PUBLIC_BASE_URL")
+        or ""
+    ).strip().rstrip("/")
+    if explicit:
+        return explicit
+
+    forwarded_proto = (request.headers.get("x-forwarded-proto") or "").strip()
+    forwarded_host = (request.headers.get("x-forwarded-host") or "").strip()
+    if forwarded_proto and forwarded_host:
+        return f"{forwarded_proto}://{forwarded_host}"
+
+    return str(request.base_url).rstrip("/")
+
+
+def _normalize_dashboard_url(user_id: str, dashboard_url: str, request: Request) -> str:
+    candidate = (dashboard_url or "").strip()
+    if candidate:
+        parsed = urlparse(candidate)
+        if parsed.scheme and parsed.netloc and not _is_loopback_host(parsed.hostname or ""):
+            return candidate
+
+    public_origin = _get_dashboard_origin(request)
+    return f"{public_origin}/dashboard/user/{user_id}"
+
+
 def _build_scheduled_logs_source(interval_seconds: int, run_count: int, server_url: str = "http://localhost:8000") -> str:
     # Embed the correct server URL into executable source.
-    ingest_url = f"{server_url}/api/agent/ingest?redirect=false"
+    ingest_url = f"{server_url}/api/agent/ingest?redirect=true"
     return f'''import json
 import os
 import sys
 import time
 import requests
+import webbrowser
+from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
 from typing import Any, Dict, List
 
-AGENT_SERVER_URL = "{ingest_url}"
+DEFAULT_AGENT_SERVER_URL = "{ingest_url}"
 INTERVAL_SECONDS = {interval_seconds}
 MAX_RUNS = {run_count}
 
@@ -159,6 +216,15 @@ def load_config() -> Dict[str, Any]:
             with open(config_path, "r", encoding="utf-8") as f:
                 return json.load(f)
     raise FileNotFoundError("config.json or data.json not found")
+
+
+def _append_runtime_log(message: str) -> None:
+    log_path = os.path.join(BASE_DIR, "agent-runtime.log")
+    try:
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(message + "\\n")
+    except Exception:
+        pass
 
 
 def load_raw_logs(path: str) -> List[Dict[str, Any]]:
@@ -215,28 +281,59 @@ def normalize_logs(logs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return normalized
 
 
-def send_to_agent(secret_key: str, normalized_logs: List[Dict[str, Any]]) -> None:
+def send_to_agent(secret_key: str, normalized_logs: List[Dict[str, Any]], agent_server_url: str) -> str:
     payload = {{
         "secret_key": secret_key,
         "logs": normalized_logs,
     }}
-    response = requests.post(AGENT_SERVER_URL, json=payload, timeout=120)
+    response = requests.post(agent_server_url, json=payload, timeout=120, allow_redirects=False)
+    if response.status_code in (301, 302, 303, 307, 308):
+        return str(response.headers.get("location") or "").strip()
     if response.status_code >= 400:
         raise RuntimeError(f"Server error {{response.status_code}}: {{response.text}}")
+    return ""
 
 
 def run_scan() -> None:
     config = load_config()
     secret_key = config.get("secret_key") or config.get("secret-key") or config.get("api_key")
     log_path = config.get("log_path") or config.get("log_file_path")
+    agent_server_url = (
+        config.get("agent_server_url")
+        or config.get("ingest_url")
+        or DEFAULT_AGENT_SERVER_URL
+    )
+    open_dashboard_on_ingest = bool(config.get("open_dashboard_on_ingest", True))
     if not secret_key or not log_path:
         raise ValueError("config missing secret_key and/or log_path")
 
     raw_logs = load_raw_logs(log_path)
     normalized = normalize_logs(raw_logs)
     if not normalized:
+        _append_runtime_log("No valid normalized logs found. Nothing was sent.")
         return
-    send_to_agent(secret_key, normalized)
+    redirect_url = send_to_agent(secret_key, normalized, agent_server_url)
+    if redirect_url and open_dashboard_on_ingest:
+        try:
+            parsed_redirect = urlparse(redirect_url)
+            params = dict(parse_qsl(parsed_redirect.query, keep_blank_values=True))
+            if "agent_key" not in params:
+                params["agent_key"] = secret_key
+            final_redirect_url = urlunparse(
+                (
+                    parsed_redirect.scheme,
+                    parsed_redirect.netloc,
+                    parsed_redirect.path,
+                    parsed_redirect.params,
+                    urlencode(params),
+                    parsed_redirect.fragment,
+                )
+            )
+            webbrowser.open(final_redirect_url)
+            _append_runtime_log(f"Opened dashboard URL: {{final_redirect_url}}")
+        except Exception as browser_error:
+            _append_runtime_log(f"Redirect URL available but browser open failed: {{browser_error}}")
+    _append_runtime_log(f"Sent {{len(normalized)}} logs to {{agent_server_url}}")
 
 
 if __name__ == "__main__":
@@ -244,8 +341,8 @@ if __name__ == "__main__":
     while MAX_RUNS <= 0 or runs < MAX_RUNS:
         try:
             run_scan()
-        except Exception:
-            pass
+        except Exception as e:
+            _append_runtime_log(f"Scan failed: {{e}}")
         runs += 1
         if MAX_RUNS > 0 and runs >= MAX_RUNS:
             break
@@ -704,12 +801,14 @@ async def upload_logs(logs: List[Dict[str, Any]], user_id: str = Depends(get_use
 
 
 @app.post("/api/agents")
-async def create_agent_key(payload: AgentCreateRequest, user_id: str = Depends(get_user_id)):
+async def create_agent_key(
+    payload: AgentCreateRequest,
+    request: Request,
+    user_id: str = Depends(get_user_id),
+):
     """Generate and persist an agent secret key for the authenticated user."""
     try:
-        dashboard_url = (payload.dashboard_url or "").strip()
-        if not dashboard_url:
-            raise HTTPException(status_code=400, detail="dashboard_url is required")
+        dashboard_url = _normalize_dashboard_url(user_id, payload.dashboard_url or "", request)
 
         agent = SupabaseOps.create_agent(user_id=user_id, dashboard_url=dashboard_url)
         if not agent:
@@ -757,7 +856,20 @@ async def ingest_agent_logs(payload: AgentIngestRequest, redirect: bool = Query(
         result = _process_logs_for_user(user_id, payload.logs)
 
         if redirect and dashboard_url:
-            return RedirectResponse(url=dashboard_url, status_code=307)
+            parsed = urlparse(dashboard_url)
+            params = dict(parse_qsl(parsed.query, keep_blank_values=True))
+            params["agent_key"] = secret_key
+            redirect_url = urlunparse(
+                (
+                    parsed.scheme,
+                    parsed.netloc,
+                    parsed.path,
+                    parsed.params,
+                    urlencode(params),
+                    parsed.fragment,
+                )
+            )
+            return RedirectResponse(url=redirect_url, status_code=307)
 
         return {
             "message": "Agent logs ingested successfully",
@@ -774,7 +886,11 @@ async def ingest_agent_logs(payload: AgentIngestRequest, redirect: bool = Query(
 
 
 @app.post("/api/agents/scheduled/generate")
-async def generate_scheduled_agent(payload: ScheduledAgentRequest, user_id: str = Depends(get_user_id)):
+async def generate_scheduled_agent(
+    payload: ScheduledAgentRequest,
+    request: Request,
+    user_id: str = Depends(get_user_id),
+):
     """Generate scheduled logs.exe and return zip with logs.exe + config.json."""
     allowed_intervals = {21600, 43200, 86400, 604800}
     interval_seconds = int(payload.interval_seconds)
@@ -804,12 +920,18 @@ async def generate_scheduled_agent(payload: ScheduledAgentRequest, user_id: str 
         build_dir.mkdir(parents=True, exist_ok=True)
         spec_dir.mkdir(parents=True, exist_ok=True)
 
-        # Extract base URL from dashboard_url (e.g., "http://192.168.1.169:3000" from "http://192.168.1.169:3000/dashboard/user/uuid")
-        dashboard_url = (agent.get("dashboard_url") or "http://localhost:8000").strip()
-        parsed = urlparse(dashboard_url)
-        server_url = f"{parsed.scheme}://{parsed.netloc}"
+        # Auto-repair localhost dashboard_url and persist corrected URL for future builds.
+        dashboard_url = _normalize_dashboard_url(user_id, agent.get("dashboard_url") or "", request)
+        if dashboard_url != (agent.get("dashboard_url") or "").strip() and agent.get("id"):
+            SupabaseOps.update_agent_dashboard_url(str(agent.get("id")), dashboard_url)
 
-        script_path.write_text(_build_scheduled_logs_source(interval_seconds, run_count, server_url), encoding="utf-8")
+        parsed = urlparse(dashboard_url)
+        dashboard_origin = f"{parsed.scheme}://{parsed.netloc}"
+        ingest_origin = (os.getenv("AGENT_PUBLIC_BASE_URL") or "").strip().rstrip("/")
+        if not ingest_origin:
+            ingest_origin = dashboard_origin
+
+        script_path.write_text(_build_scheduled_logs_source(interval_seconds, run_count, ingest_origin), encoding="utf-8")
 
         build_cmd = [
             sys.executable,
@@ -846,6 +968,8 @@ async def generate_scheduled_agent(payload: ScheduledAgentRequest, user_id: str 
             "secret_key": secret_key,
             "api_key": secret_key,
             "log_path": "/var/log/nginx/access.log",
+            "agent_server_url": f"{ingest_origin}/api/agent/ingest?redirect=true",
+            "open_dashboard_on_ingest": True,
             "scan_interval_seconds": interval_seconds,
             "max_scan_runs": run_count,
         }
@@ -867,7 +991,7 @@ async def generate_scheduled_agent(payload: ScheduledAgentRequest, user_id: str 
         shutil.rmtree(temp_root, ignore_errors=True)
 
 @app.get("/api/analysis")
-async def get_analysis(user_id: str = Depends(get_user_id)):
+async def get_analysis(user_id: str = Depends(resolve_user_id_for_read)):
     """
     Fetch analysis results for all APIs for this user from Supabase.
     """
@@ -908,7 +1032,7 @@ async def get_analysis(user_id: str = Depends(get_user_id)):
 
 
 @app.get("/api/graph")
-async def get_graph_data(user_id: str = Depends(get_user_id)):
+async def get_graph_data(user_id: str = Depends(resolve_user_id_for_read)):
     """
     Fetch graph visualization data from Supabase.
     """
@@ -926,7 +1050,7 @@ async def get_graph_data(user_id: str = Depends(get_user_id)):
 
 
 @app.get("/api/alerts")
-async def get_alerts(user_id: str = Depends(get_user_id)):
+async def get_alerts(user_id: str = Depends(resolve_user_id_for_read)):
     """
     Fetch all unresolved risk alerts for this user.
     """
@@ -950,7 +1074,7 @@ def health_check():
 @app.post("/api/mitigations/generate")
 async def generate_mitigation(
     payload: MitigationRequest,
-    user_id: str = Depends(get_user_id),
+    user_id: str = Depends(resolve_user_id_for_read),
 ):
     """
     Generate endpoint-specific mitigation techniques with Groq.

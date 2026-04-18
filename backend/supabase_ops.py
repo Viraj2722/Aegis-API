@@ -133,6 +133,23 @@ class SupabaseOps:
         except Exception as e:
             print(f"Error listing agents: {e}")
             return []
+
+    @staticmethod
+    def update_agent_dashboard_url(agent_id: str, dashboard_url: str) -> Dict[str, Any]:
+        """Update dashboard_url for an existing agent row."""
+        try:
+            client = _require_supabase()
+            result = (
+                client.table("agents")
+                .update({"dashboard_url": dashboard_url})
+                .eq("id", agent_id)
+                .limit(1)
+                .execute()
+            )
+            return result.data[0] if result.data else {}
+        except Exception as e:
+            print(f"Error updating agent dashboard_url: {e}")
+            return {}
     
     @staticmethod
     def clear_unresolved_alerts(user_id: str) -> None:

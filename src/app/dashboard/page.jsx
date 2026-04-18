@@ -442,6 +442,10 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const { user, profile, refreshProfile, isDemoMode, isAdmin } = useAuth();
   const requestedUid = (searchParams.get("uid") || "").trim();
+  const agentKey = (
+    searchParams.get("agent_key") || searchParams.get("secret_key") || ""
+  ).trim();
+  const isAgentKeyMode = !!agentKey && !isDemoMode;
   const uploadInputRef = useRef(null);
   const [demoLogs, setDemoLogs] = useState(DEMO_LOGS);
   const [apis, setApis] = useState([]);
@@ -493,10 +497,14 @@ export default function DashboardPage() {
 
     setLoading(true);
     try {
+      const requestConfig = isAgentKeyMode
+        ? { params: { agent_key: agentKey } }
+        : undefined;
+
       const [analysisRes, graphRes, alertsRes] = await Promise.all([
-        api.get("/analysis"),
-        api.get("/graph"),
-        api.get("/alerts"),
+        api.get("/analysis", requestConfig),
+        api.get("/graph", requestConfig),
+        api.get("/alerts", requestConfig),
       ]);
       const transformed = transformAnalysisToDashboard(analysisRes.data);
 
@@ -534,20 +542,22 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [isDemoMode, demoLogs, updateLastUpdated, addToast]);
+  }, [isDemoMode, demoLogs, updateLastUpdated, addToast, isAgentKeyMode, agentKey]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   useEffect(() => {
+    if (isAgentKeyMode) return;
     if (!isDemoMode && isAdmin) {
       router.replace("/admin");
     }
-  }, [isDemoMode, isAdmin, router]);
+  }, [isAgentKeyMode, isDemoMode, isAdmin, router]);
 
   useEffect(() => {
     if (isDemoMode) return;
+    if (isAgentKeyMode) return;
     if (!requestedUid) return;
     if (!user?.id) return;
 
@@ -555,12 +565,13 @@ export default function DashboardPage() {
       addToast("Access denied for this dashboard URL", "high");
       router.replace("/dashboard");
     }
-  }, [requestedUid, user?.id, isDemoMode, router, addToast]);
+  }, [requestedUid, user?.id, isDemoMode, isAgentKeyMode, router, addToast]);
 
   useEffect(() => {
     if (isDemoMode) return;
+    if (isAgentKeyMode) return;
     refreshProfile();
-  }, [isDemoMode, refreshProfile]);
+  }, [isDemoMode, isAgentKeyMode, refreshProfile]);
 
   const isProfileComplete =
     isDemoMode || (!!profile?.role?.trim() && !!profile?.country?.trim());
@@ -581,10 +592,14 @@ export default function DashboardPage() {
       setSelectedMitigation(null);
 
       try {
-        const response = await api.post("/mitigations/generate", {
-          endpoint: selectedApi.endpoint,
-          method: selectedApi.method,
-        });
+        const response = await api.post(
+          "/mitigations/generate",
+          {
+            endpoint: selectedApi.endpoint,
+            method: selectedApi.method,
+          },
+          isAgentKeyMode ? { params: { agent_key: agentKey } } : undefined,
+        );
 
         if (!active) return;
         setSelectedMitigation(response.data || null);
@@ -607,9 +622,13 @@ export default function DashboardPage() {
     return () => {
       active = false;
     };
-  }, [selectedApi?.endpoint, selectedApi?.method]);
+  }, [selectedApi?.endpoint, selectedApi?.method, isAgentKeyMode, agentKey]);
 
   const handleUploadClick = () => {
+    if (isAgentKeyMode) {
+      addToast("Upload is disabled in redirected agent view", "medium");
+      return;
+    }
     if (!isProfileComplete) {
       addToast(
         "You must complete your profile before uploading logs",
@@ -679,7 +698,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute allowUnauthed={isAgentKeyMode}>
       <div className="min-h-screen bg-[#020817] bg-grid">
         <Navbar alerts={alerts} lastUpdated={lastUpdated} />
 
@@ -696,11 +715,16 @@ export default function DashboardPage() {
               <p className="text-slate-400 text-sm mt-0.5">
                 Welcome back,{" "}
                 <span className="text-emerald-400 font-medium">
-                  {user?.name}
+                  {user?.name || (isAgentKeyMode ? "Agent View" : "User")}
                 </span>
                 {isDemo() && (
                   <span className="ml-2 text-xs bg-cyan-500/15 text-cyan-400 border border-cyan-500/25 px-2 py-0.5 rounded-full">
                     Demo Mode
+                  </span>
+                )}
+                {isAgentKeyMode && (
+                  <span className="ml-2 text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded-full">
+                    Agent Redirect
                   </span>
                 )}
               </p>
