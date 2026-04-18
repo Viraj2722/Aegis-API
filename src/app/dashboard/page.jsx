@@ -574,7 +574,9 @@ export default function DashboardPage() {
   }, [isDemoMode, isAgentKeyMode, refreshProfile]);
 
   const isProfileComplete =
-    isDemoMode || (!!profile?.role?.trim() && !!profile?.country?.trim());
+    isDemoMode ||
+    isAgentKeyMode ||
+    (!!profile?.role?.trim() && !!profile?.country?.trim());
 
   useEffect(() => {
     let active = true;
@@ -753,7 +755,7 @@ export default function DashboardPage() {
               </button>
               <button
                 onClick={handleUploadClick}
-                disabled={uploading}
+                disabled={uploading || isAgentKeyMode}
                 className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm text-white font-medium transition-all glow-blue disabled:opacity-60 disabled:cursor-not-allowed"
                 title="Upload API logs"
               >

@@ -851,8 +851,11 @@ async def ingest_agent_logs(payload: AgentIngestRequest, redirect: bool = Query(
         if not agent:
             raise HTTPException(status_code=401, detail="Invalid secret key")
 
-        user_id = agent.get("user_id")
-        dashboard_url = agent.get("dashboard_url")
+        user_id = (agent.get("user_id") or "").strip()
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid agent mapping")
+
+        dashboard_url = (agent.get("dashboard_url") or "").strip()
         result = _process_logs_for_user(user_id, payload.logs)
 
         if redirect and dashboard_url:

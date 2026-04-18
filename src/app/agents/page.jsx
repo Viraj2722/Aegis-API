@@ -37,7 +37,9 @@ const AIAgentPage = () => {
   const [scheduledError, setScheduledError] = useState("");
   const [isScheduledGenerating, setIsScheduledGenerating] = useState(false);
   const [scheduledZipUrl, setScheduledZipUrl] = useState("");
-  const [scheduledZipName, setScheduledZipName] = useState("scheduled-agent.zip");
+  const [scheduledZipName, setScheduledZipName] = useState(
+    "scheduled-agent.zip",
+  );
   const [scheduledRunCount, setScheduledRunCount] = useState(5);
   const [runForever, setRunForever] = useState(false);
 
@@ -118,8 +120,10 @@ const AIAgentPage = () => {
         throw new Error("Sign in with a real account to generate agent keys");
       }
 
-      const dashboardUrl = `${window.location.origin}/dashboard/user/${user.id}`;
-      const response = await api.post("/agents", { dashboard_url: dashboardUrl });
+      const dashboardUrl = `${window.location.origin}/dashboard`;
+      const response = await api.post("/agents", {
+        dashboard_url: dashboardUrl,
+      });
       const row = response?.data || {};
 
       const newKey = {
@@ -172,7 +176,6 @@ const AIAgentPage = () => {
       {
         secret_key:
           apiKeys.length > 0 ? apiKeys[0].key : "YOUR_SECRET_KEY_HERE",
-        api_key: apiKeys.length > 0 ? apiKeys[0].key : "YOUR_API_KEY_HERE",
         log_path: "/var/log/nginx/access.log",
       },
       null,
@@ -185,7 +188,7 @@ const AIAgentPage = () => {
       if (response.ok) {
         const blob = await response.blob();
         zip.file("logs.exe", blob);
-      }   
+      }
     } catch (err) {
       console.warn("Could not fetch logs.exe:", err);
     }
@@ -207,7 +210,9 @@ const AIAgentPage = () => {
 
     try {
       if (!user?.id || isDemoMode) {
-        throw new Error("Sign in with a real account to generate scheduled agents");
+        throw new Error(
+          "Sign in with a real account to generate scheduled agents",
+        );
       }
       if (apiKeys.length === 0 || !apiKeys[0].key) {
         throw new Error("Create an API key first");
@@ -265,10 +270,10 @@ const AIAgentPage = () => {
                 AegisAPI Agent Setup
               </h1>
               <p className="text-slate-400 leading-relaxed max-w-2xl">
-                The AI Agent is required for large-scale systems where log files are
-                too massive for manual uploads. It automates the log analysis
-                process by monitoring files locally and pushing processed security
-                signatures to the dashboard in real-time.
+                The AI Agent is required for large-scale systems where log files
+                are too massive for manual uploads. It automates the log
+                analysis process by monitoring files locally and pushing
+                processed security signatures to the dashboard in real-time.
               </p>
             </div>
           </div>
@@ -282,10 +287,14 @@ const AIAgentPage = () => {
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-slate-400">Scan Interval</p>
+            <p className="text-sm font-semibold text-slate-400">
+              Scan Interval
+            </p>
             <select
               value={scheduledInterval}
-              onChange={(event) => setScheduledInterval(Number(event.target.value))}
+              onChange={(event) =>
+                setScheduledInterval(Number(event.target.value))
+              }
               className="w-full md:w-64 bg-black/60 border border-emerald-500/20 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
             >
               {SCHEDULE_OPTIONS.map((option) => (
@@ -297,11 +306,15 @@ const AIAgentPage = () => {
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-slate-400">Number Of Scheduled Scans</p>
+            <p className="text-sm font-semibold text-slate-400">
+              Number Of Scheduled Scans
+            </p>
             <select
               disabled={runForever}
               value={scheduledRunCount}
-              onChange={(event) => setScheduledRunCount(Number(event.target.value))}
+              onChange={(event) =>
+                setScheduledRunCount(Number(event.target.value))
+              }
               className="w-full md:w-64 bg-black/60 border border-emerald-500/20 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value={5}>5 scans</option>
@@ -316,7 +329,9 @@ const AIAgentPage = () => {
               />
               Run forever
             </label>
-            <p className="text-[11px] text-slate-500">When enabled, the generated scheduled agent runs continuously.</p>
+            <p className="text-[11px] text-slate-500">
+              When enabled, the generated scheduled agent runs continuously.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -352,7 +367,8 @@ const AIAgentPage = () => {
 }`}</pre>
               <p className="text-[11px] text-slate-500 leading-relaxed">
                 logs.exe should send normalized logs + secret_key to
-                <span className="text-cyan-400"> {ingestPath}</span> (backend URL).
+                <span className="text-cyan-400"> {ingestPath}</span> (backend
+                URL).
               </p>
             </div>
           </div>
@@ -378,14 +394,18 @@ const AIAgentPage = () => {
           </button>
 
           <div className="pt-2 space-y-3">
-            <p className="text-sm font-semibold text-slate-400">Scheduled Agent</p>
+            <p className="text-sm font-semibold text-slate-400">
+              Scheduled Agent
+            </p>
             <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={handleGenerateScheduledAgent}
                 disabled={isScheduledGenerating || apiKeys.length === 0}
                 className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isScheduledGenerating ? "Generating..." : "Generate Scheduled Agent"}
+                {isScheduledGenerating
+                  ? "Generating..."
+                  : "Generate Scheduled Agent"}
               </button>
 
               <button
@@ -398,7 +418,9 @@ const AIAgentPage = () => {
             </div>
 
             {apiKeys.length === 0 ? (
-              <p className="text-xs text-amber-300">Create an API key first before generating scheduled agent.</p>
+              <p className="text-xs text-amber-300">
+                Create an API key first before generating scheduled agent.
+              </p>
             ) : null}
 
             {scheduledError ? (
@@ -546,7 +568,6 @@ const AIAgentPage = () => {
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
