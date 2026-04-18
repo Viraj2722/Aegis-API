@@ -108,9 +108,6 @@ const DEMO_LOGS = [
   {
     api: "/api/internal/debug",
     method: "GET",
-      if (isAgentKeyMode) {
-        setAgentProfile(profileRes?.data?.profile || null);
-      }
     response_code: 200,
     response_time: 690,
     payload_size: 2300,
@@ -308,6 +305,7 @@ function buildSimulationData(rawApis, rawEdges) {
   return {
     apis,
     edges: inferredEdges,
+  };
 }
 
 function buildDemoDashboardFromLogs(logRows) {
