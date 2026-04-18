@@ -711,7 +711,11 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute allowUnauthed={isAgentKeyMode}>
       <div className="min-h-screen bg-[#020817] bg-grid">
-        <Navbar alerts={alerts} lastUpdated={lastUpdated} />
+        <Navbar
+          alerts={alerts}
+          lastUpdated={lastUpdated}
+          displayName={displayName}
+        />
 
         <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-5">
           <motion.div

@@ -15,7 +15,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "next/navigation";
 import BrandLogo from "../BrandLogo";
 
-export default function Navbar({ alerts = [], lastUpdated }) {
+export default function Navbar({ alerts = [], lastUpdated, displayName = "User" }) {
   const { user, logout, isAdmin } = useAuth();
   const router = useRouter();
   const [showUser, setShowUser] = useState(false);
@@ -61,7 +61,7 @@ export default function Navbar({ alerts = [], lastUpdated }) {
               <User size={12} className="text-white" />
             </div>
             <span className="text-sm text-slate-300 hidden sm:block max-w-[100px] truncate">
-              {user?.name || "User"}
+              {displayName || user?.name || "User"}
             </span>
             <ChevronDown
               size={14}
@@ -79,7 +79,7 @@ export default function Navbar({ alerts = [], lastUpdated }) {
               >
                 <div className="px-4 py-3 border-b border-slate-800">
                   <p className="text-white text-sm font-medium truncate">
-                    {user?.name}
+                    {displayName || user?.name || "User"}
                   </p>
                   <p className="text-slate-500 text-xs truncate">
                     {user?.email}
