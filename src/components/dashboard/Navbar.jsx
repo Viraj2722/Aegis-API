@@ -15,10 +15,15 @@ import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "next/navigation";
 import BrandLogo from "../BrandLogo";
 
-export default function Navbar({ alerts = [], lastUpdated, displayName = "User" }) {
+export default function Navbar({ alerts = [], lastUpdated, displayName = "User", displayProfile = null, isAgentKeyMode = false }) {
   const { user, logout, isAdmin } = useAuth();
   const router = useRouter();
   const [showUser, setShowUser] = useState(false);
+
+  // In agent mode, use email from displayProfile; otherwise use user.email
+  const displayEmail = isAgentKeyMode 
+    ? displayProfile?.email 
+    : user?.email;
 
   const handleLogout = async () => {
     await logout();
@@ -82,7 +87,7 @@ export default function Navbar({ alerts = [], lastUpdated, displayName = "User" 
                     {displayName || user?.name || "User"}
                   </p>
                   <p className="text-slate-500 text-xs truncate">
-                    {user?.email}
+                    {displayEmail || "No email"}
                   </p>
                 </div>
                 <button

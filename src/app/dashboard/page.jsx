@@ -609,6 +609,16 @@ export default function DashboardPage() {
     }
   }, [requestedUid, user?.id, isDemoMode, isAgentKeyMode, router, addToast]);
 
+  // Ensure profile is loaded when user.id becomes available
+  useEffect(() => {
+    if (isDemoMode) return;
+    if (isAgentKeyMode) return;
+    if (!user?.id) return;
+    if (profile) return; // Only fetch if profile is not already loaded
+    
+    refreshProfile();
+  }, [isDemoMode, isAgentKeyMode, user?.id, profile, refreshProfile]);
+
   useEffect(() => {
     if (isDemoMode) return;
     if (isAgentKeyMode) return;
@@ -754,6 +764,8 @@ export default function DashboardPage() {
           alerts={alerts}
           lastUpdated={lastUpdated}
           displayName={displayName}
+          displayProfile={displayProfile}
+          isAgentKeyMode={isAgentKeyMode}
         />
 
         <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-5">
@@ -784,8 +796,16 @@ export default function DashboardPage() {
               </p>
               {displayProfile && (
                 <p className="text-xs text-slate-500 mt-1">
-                  {displayProfile.role || "Role unavailable"}
-                  {displayProfile.country ? ` • ${displayProfile.country}` : ""}
+                  {displayProfile.email && (
+                    <span className="block mb-1">{displayProfile.email}</span>
+                  )}
+                  {(displayProfile.role || displayProfile.country || displayProfile.company_name) && (
+                    <span>
+                      {displayProfile.role || "Role unavailable"}
+                      {displayProfile.company_name ? ` • ${displayProfile.company_name}` : ""}
+                      {displayProfile.country ? ` • ${displayProfile.country}` : ""}
+                    </span>
+                  )}
                 </p>
               )}
             </div>

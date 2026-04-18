@@ -304,7 +304,7 @@ export function AuthProvider({ children }) {
     const mapped = mapProfileRow(data);
     setProfile(mapped);
     return mapped;
-  }, [isDemoMode, profile, user?.id]);
+  }, [isDemoMode, user?.id]);
 
   const updateProfile = useCallback(async (patch) => {
     if (isDemoMode) {

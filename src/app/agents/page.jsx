@@ -34,8 +34,6 @@ const AIAgentPage = () => {
   const [isLoadingKeys, setIsLoadingKeys] = useState(false);
   const [apiError, setApiError] = useState("");
   const [copiedKey, setCopiedKey] = useState(null);
-  const [isZipLoading, setIsZipLoading] = useState(true);
-  const [zipError, setZipError] = useState(false);
   const [scheduledInterval, setScheduledInterval] = useState(86400);
   const [scheduledError, setScheduledError] = useState("");
   const [isScheduledGenerating, setIsScheduledGenerating] = useState(false);
@@ -58,26 +56,6 @@ const AIAgentPage = () => {
       }
     };
   }, [scheduledZipUrl]);
-
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src =
-      "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
-    script.async = true;
-    script.onload = () => setIsZipLoading(false);
-    script.onerror = () => {
-      setIsZipLoading(false);
-      setZipError(true);
-    };
-
-    document.body.appendChild(script);
-
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     const loadAgents = async () => {
@@ -174,46 +152,38 @@ const AIAgentPage = () => {
   };
 
   const downloadAgentZip = async () => {
-    if (typeof window.JSZip === "undefined") return;
     setApiError("");
 
-    const zip = new window.JSZip();
-
-    const configJson = JSON.stringify(
-      {
-        secret_key:
-          apiKeys.length > 0 ? apiKeys[0].key : "YOUR_SECRET_KEY_HERE",
-        log_path: "/var/log/nginx/access.log",
-      },
-      null,
-      4,
-    );
-
-    try {
-      // Fetch logs.exe binary file
-      const response = await fetch("/logs.exe");
-      if (!response.ok) {
-        throw new Error(`logs.exe not found (HTTP ${response.status})`);
-      }
-      const blob = await response.blob();
-      zip.file("logs.exe", blob);
-    } catch (err) {
-      console.warn("Could not fetch logs.exe:", err);
-      setApiError(
-        "logs.exe is missing from the server. Place it in public/logs.exe and try again.",
-      );
+    if (apiKeys.length === 0 || !apiKeys[0].key) {
+      setApiError("Create an API key first");
       return;
     }
 
-    zip.file("config.json", configJson);
+    try {
+      const response = await api.post(
+        "/agents/generate",
+        {
+          secret_key: apiKeys[0].key,
+          interval_seconds: 0,
+          run_count: 1,
+        },
+        { responseType: "blob" },
+      );
 
-    const content = await zip.generateAsync({ type: "blob" });
-    const url = window.URL.createObjectURL(content);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "AegisAPI_Agent.zip";
-    link.click();
-    window.URL.revokeObjectURL(url);
+      const blob = new Blob([response.data], { type: "application/zip" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "AegisAPI_Agent.zip";
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setApiError(
+        err?.response?.data?.detail ||
+          err?.message ||
+          "Unable to generate agent zip",
+      );
+    }
   };
 
   const handleGenerateScheduledAgent = async () => {
@@ -402,22 +372,11 @@ const AIAgentPage = () => {
 
           <button
             onClick={downloadAgentZip}
-            disabled={isZipLoading || zipError}
+            onClick={downloadAgentZip}
+            disabled={apiKeys.length === 0}
             className="w-full md:w-auto px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(16,185,129,0.25)] disabled:opacity-50"
           >
-            {isZipLoading ? (
-              <>
-                <Loader2 className="animate-spin" size={18} /> Loading JSZip...
-              </>
-            ) : zipError ? (
-              <>
-                <AlertCircle size={18} /> Error Loading JSZip
-              </>
-            ) : (
-              <>
-                <Download size={18} /> Download Agent (ZIP)
-              </>
-            )}
+            <Download size={18} /> Download Agent (ZIP)
           </button>
 
           <div className="pt-2 space-y-3">

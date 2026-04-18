@@ -888,6 +888,281 @@ async def ingest_agent_logs(payload: AgentIngestRequest, redirect: bool = Query(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+def _build_normal_logs_source(server_url: str = "http://localhost:8000") -> str:
+    """Build normal (one-time run) logs.py source code with embedded server URL."""
+    ingest_url = f"{server_url}/api/agent/ingest?redirect=true"
+    return f'''import json
+import requests
+import os
+import sys
+import webbrowser
+from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
+from typing import List, Dict, Any
+
+# Correct ingest endpoint
+AGENT_SERVER_URL = "{ingest_url}"
+
+BASE_DIR = (
+    os.path.dirname(sys.executable)
+    if getattr(sys, "frozen", False)
+    else os.path.dirname(os.path.abspath(__file__))
+)
+
+def load_config() -> Dict[str, Any]:
+    config_candidates = ["config.json", "data.json"]
+    config_path = None
+    for name in config_candidates:
+        candidate = os.path.join(BASE_DIR, name)
+        if os.path.exists(candidate):
+            config_path = candidate
+            break
+
+    if not config_path:
+        raise FileNotFoundError("config.json or data.json not found")
+
+    with open(config_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def load_raw_logs(path: str) -> List[Dict[str, Any]]:
+    full_path = path if os.path.isabs(path) else os.path.join(BASE_DIR, path)
+    if not os.path.exists(full_path):
+        raise FileNotFoundError(f"{{path}} not found")
+    with open(full_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def normalize_logs(logs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    normalized = []
+    aliases = {{
+        "api": ["api", "path", "endpoint", "url", "uri", "route"],
+        "method": ["method", "http_method", "verb"],
+        "response_code": ["response_code", "status_code", "status"],
+        "response_time": ["response_time", "latency", "duration"],
+        "payload_size": ["payload_size", "bytes", "size"],
+        "timestamp": ["timestamp", "time", "date"]
+    }}
+
+    for log in logs:
+        new_log = {{}}
+        for canonical, keys in aliases.items():
+            value = None
+            for key in keys:
+                if key in log:
+                    value = log[key]
+                    break
+            new_log[canonical] = value
+
+        new_log["api"] = str(new_log.get("api") or "").strip()
+        new_log["method"] = str(new_log.get("method") or "GET").upper()
+
+        try:
+            new_log["response_code"] = int(new_log.get("response_code") or 200)
+        except Exception:
+            new_log["response_code"] = 200
+
+        try:
+            new_log["response_time"] = float(new_log.get("response_time") or 0)
+        except Exception:
+            new_log["response_time"] = 0.0
+
+        try:
+            new_log["payload_size"] = float(new_log.get("payload_size") or 0)
+        except Exception:
+            new_log["payload_size"] = 0.0
+
+        new_log["timestamp"] = new_log.get("timestamp") or ""
+        if new_log["api"] == "":
+            continue
+
+        normalized.append(new_log)
+
+    return normalized
+
+def send_to_agent(secret_key: str, normalized_logs: List[Dict[str, Any]]):
+    payload = {{
+        "secret_key": secret_key,
+        "logs": normalized_logs
+    }}
+
+    try:
+        print(f"Sending {{len(normalized_logs)}} logs to server...")
+        response = requests.post(
+            AGENT_SERVER_URL,
+            json=payload,
+            timeout=15,
+            allow_redirects=False,
+        )
+
+        if response.status_code in (301, 302, 303, 307, 308):
+            location = response.headers.get("location")
+            print(f"Redirect received ({{response.status_code}})")
+            if location:
+                print(f"Dashboard URL: {{location}}")
+                try:
+                    parsed_redirect = urlparse(location)
+                    params = dict(parse_qsl(parsed_redirect.query, keep_blank_values=True))
+                    if "agent_key" not in params:
+                        params["agent_key"] = secret_key
+                    final_redirect_url = urlunparse(
+                        (
+                            parsed_redirect.scheme,
+                            parsed_redirect.netloc,
+                            parsed_redirect.path,
+                            parsed_redirect.params,
+                            urlencode(params),
+                            parsed_redirect.fragment,
+                        )
+                    )
+                    webbrowser.open(final_redirect_url)
+                    print("Opened dashboard in default browser")
+                except Exception as open_err:
+                    print(f"Could not open browser automatically: {{open_err}}")
+            else:
+                print("Redirect response had no Location header")
+            return
+
+        if response.status_code == 200:
+            print("Success")
+            body = response.json()
+            print(body)
+            dashboard_url = body.get("dashboard_url") if isinstance(body, dict) else None
+            if dashboard_url:
+                print(f"Dashboard URL: {{dashboard_url}}")
+        else:
+            print(f"Server Error ({{response.status_code}})")
+            print(response.text)
+
+    except requests.exceptions.Timeout:
+        print("Request timed out")
+    except requests.exceptions.ConnectionError:
+        print("Could not connect to server")
+    except Exception as e:
+        print("Unexpected error:", str(e))
+
+def main():
+    print("Starting Log Processing Agent")
+    try:
+        config = load_config()
+        secret_key = config.get("secret_key") or config.get("secret-key")
+
+        # Accept either key name to avoid config mismatch
+        log_path = config.get("log_path") or config.get("log_file_path")
+
+        if not secret_key or not log_path:
+            raise ValueError("Invalid config (missing secret_key/secret-key or log_path)")
+
+        raw_logs = load_raw_logs(log_path)
+        print(f"Loaded {{len(raw_logs)}} raw logs")
+
+        normalized_logs = normalize_logs(raw_logs)
+        print(f"Normalized {{len(normalized_logs)}} logs")
+
+        if not normalized_logs:
+            print("No valid logs to send")
+            return
+
+        send_to_agent(secret_key, normalized_logs)
+
+    except Exception as e:
+        print("Error:", str(e))
+
+if __name__ == "__main__":
+    main()
+'''
+
+
+@app.post("/api/agents/generate")
+async def generate_normal_agent(
+    payload: ScheduledAgentRequest,
+    request: Request,
+    user_id: str = Depends(get_user_id),
+):
+    """Generate normal (one-time run) logs.exe and return zip with logs.exe + config.json."""
+    secret_key = (payload.secret_key or "").strip()
+    if not secret_key:
+        raise HTTPException(status_code=400, detail="secret_key is required")
+
+    agent = SupabaseOps.get_agent_by_secret(secret_key)
+    if not agent:
+        raise HTTPException(status_code=401, detail="Invalid secret key")
+    if str(agent.get("user_id") or "") != user_id:
+        raise HTTPException(status_code=403, detail="Secret key does not belong to current user")
+
+    temp_root = Path(tempfile.mkdtemp(prefix="aegis_agent_"))
+    try:
+        script_path = temp_root / "logs.py"
+        dist_dir = temp_root / "dist"
+        build_dir = temp_root / "build"
+        spec_dir = temp_root / "spec"
+        dist_dir.mkdir(parents=True, exist_ok=True)
+        build_dir.mkdir(parents=True, exist_ok=True)
+        spec_dir.mkdir(parents=True, exist_ok=True)
+
+        # Auto-repair localhost dashboard_url and persist corrected URL for future builds.
+        dashboard_url = _normalize_dashboard_url(user_id, agent.get("dashboard_url") or "", request)
+        if dashboard_url != (agent.get("dashboard_url") or "").strip() and agent.get("id"):
+            SupabaseOps.update_agent_dashboard_url(str(agent.get("id")), dashboard_url)
+
+        parsed = urlparse(dashboard_url)
+        dashboard_origin = f"{parsed.scheme}://{parsed.netloc}"
+        ingest_origin = (os.getenv("AGENT_PUBLIC_BASE_URL") or "").strip().rstrip("/")
+        if not ingest_origin:
+            ingest_origin = dashboard_origin
+
+        script_path.write_text(_build_normal_logs_source(ingest_origin), encoding="utf-8")
+
+        build_cmd = [
+            sys.executable,
+            "-m",
+            "PyInstaller",
+            "--onefile",
+            "--name",
+            "logs",
+            str(script_path),
+            "--distpath",
+            str(dist_dir),
+            "--workpath",
+            str(build_dir),
+            "--specpath",
+            str(spec_dir),
+        ]
+
+        process = subprocess.run(
+            build_cmd,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+        if process.returncode != 0:
+            snippet = (process.stderr or process.stdout or "PyInstaller failed")[-1200:]
+            raise HTTPException(status_code=500, detail=f"Agent build failed: {snippet}")
+
+        exe_path = dist_dir / "logs.exe"
+        if not exe_path.exists():
+            raise HTTPException(status_code=500, detail="logs.exe was not generated")
+
+        config_payload = {
+            "secret_key": secret_key,
+            "log_path": "/var/log/nginx/access.log",
+        }
+        config_path = temp_root / "config.json"
+        config_path.write_text(json.dumps(config_payload, indent=2), encoding="utf-8")
+
+        zip_path = temp_root / "agent.zip"
+        with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.write(exe_path, arcname="logs.exe")
+            zf.write(config_path, arcname="config.json")
+
+        zip_bytes = zip_path.read_bytes()
+        return Response(
+            content=zip_bytes,
+            media_type="application/zip",
+            headers={"Content-Disposition": "attachment; filename=agent.zip"},
+        )
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
+
 @app.post("/api/agents/scheduled/generate")
 async def generate_scheduled_agent(
     payload: ScheduledAgentRequest,

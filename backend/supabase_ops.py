@@ -392,6 +392,18 @@ class SupabaseOps:
             print(f"Error fetching risk_alerts: {e}")
             return []
     @staticmethod
+    def get_user_email(user_id: str) -> str:
+        """Fetch user email from Supabase auth (requires service role access)."""
+        try:
+            client = _require_supabase()
+            # Use admin API to get user email from auth.users
+            user = client.auth.admin.get_user(user_id)
+            return user.user.email if user and user.user else None
+        except Exception as e:
+            print(f"Error fetching user email: {e}")
+            return None
+
+    @staticmethod
     def get_user_profile(user_id: str) -> Dict[str, Any]:
         """Fetch profile details for personalization/context."""
         try:
@@ -415,9 +427,13 @@ class SupabaseOps:
                 or raw_profile.get("organization")
             )
 
+            # Fetch email from auth table
+            email = SupabaseOps.get_user_email(user_id)
+
             return {
                 "id": raw_profile.get("id"),
                 "full_name": raw_profile.get("full_name"),
+                "email": email,
                 "company_name": company_value,
                 "role": raw_profile.get("role"),
                 "country": raw_profile.get("country"),
