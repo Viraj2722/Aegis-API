@@ -24,7 +24,13 @@ SUPABASE_SERVICE_ROLE_KEY = (
 
 supabase: Client | None = None
 if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
-    supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+        print(f"Supabase client initialized: {SUPABASE_URL}")
+    except Exception as e:
+        print(f"ERROR: Supabase client failed to initialize: {e}")
+else:
+    print(f"WARNING: Supabase not configured. SUPABASE_URL={SUPABASE_URL}, KEY={'set' if SUPABASE_SERVICE_ROLE_KEY else 'missing'}")
 
 
 def _require_supabase() -> Client:
