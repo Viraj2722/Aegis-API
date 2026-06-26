@@ -8,7 +8,7 @@
     "dev:api": "cd backend && .venv\\Scripts\\python -m uvicorn main:app --port 8000",
     "dev:api:reload": "cd backend && .venv\\Scripts\\python -m uvicorn main:app --reload --port 8000",
     "dev:reset": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; if (Test-Path .next) { Remove-Item -Recurse -Force .next }; npm run dev\"",
-    "prebuild": "node -e \"const fs=require('fs'); if(fs.existsSync('.next')) fs.rmSync('.next',{recursive:true,force:true});\"",
+    "prebuild": "node -e \"try{const fs=require('fs');if(fs.existsSync('.next'))fs.rmSync('.next',{recursive:true,force:true})}catch(e){}\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
