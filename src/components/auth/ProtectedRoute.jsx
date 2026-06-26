@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
-import { useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 
-export default function ProtectedRoute({ children, allowUnauthed = false }) {
+function ProtectedRouteInner({ children, allowUnauthed = false }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isReady } = useAuth();
@@ -48,4 +47,20 @@ export default function ProtectedRoute({ children, allowUnauthed = false }) {
   }
 
   return children;
+}
+
+const LoadingFallback = (
+  <div className="min-h-screen bg-[#020817] flex items-center justify-center text-slate-400">
+    Loading...
+  </div>
+);
+
+export default function ProtectedRoute({ children, allowUnauthed = false }) {
+  return (
+    <Suspense fallback={LoadingFallback}>
+      <ProtectedRouteInner allowUnauthed={allowUnauthed}>
+        {children}
+      </ProtectedRouteInner>
+    </Suspense>
+  );
 }

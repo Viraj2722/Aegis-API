@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRef } from "react";
 import { motion } from "framer-motion";
 import { RefreshCw, Upload, Database } from "lucide-react";
@@ -441,7 +441,7 @@ function buildDemoDashboardFromLogs(logRows) {
   return { apis, stats, graphData, alerts };
 }
 
-export default function DashboardPage() {
+function DashboardPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, profile, refreshProfile, isDemoMode, isAdmin } = useAuth();
@@ -941,4 +941,8 @@ export default function DashboardPage() {
       </div>
     </ProtectedRoute>
   );
+}
+
+export default function DashboardPage() {
+  return <Suspense fallback={<div className="min-h-screen bg-[#020817] flex items-center justify-center text-slate-400">Loading...</div>}><DashboardPageInner /></Suspense>;
 }
