@@ -45,7 +45,7 @@ import {
 
 function Section({ title, icon: Icon, children }) {
   return (
-    <div className="glass p-6 lg:p-8 space-y-6 rounded-2xl border border-slate-800/50">
+    <div className="glass p-6 lg:p-8 space-y-5 rounded-2xl border border-slate-800/50">
       <div className="flex items-center gap-3">
         <Icon size={18} className="text-sky-400" />
         <h2 className="text-base font-semibold text-white">{title}</h2>
