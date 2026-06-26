@@ -12,12 +12,10 @@ import {
   Terminal,
   Loader2,
   AlertCircle,
-  LogOut,
 } from "lucide-react";
 import Navbar from "../../components/landing/Navbar";
 import api from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
-import { useRouter } from "next/navigation";
 
 const AIAgentPage = () => {
   const SCHEDULE_OPTIONS = [
@@ -27,8 +25,7 @@ const AIAgentPage = () => {
     { label: "7 days", seconds: 604800 },
   ];
 
-  const { user, isDemoMode, logout } = useAuth();
-  const router = useRouter();
+  const { user, isDemoMode } = useAuth();
   const [apiKeys, setApiKeys] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingKeys, setIsLoadingKeys] = useState(false);
@@ -161,13 +158,16 @@ const AIAgentPage = () => {
 
     try {
       const response = await api.post(
-        "/agents/generate",
+        `${backendApiBase}/agents/generate`,
         {
           secret_key: apiKeys[0].key,
           interval_seconds: 0,
           run_count: 1,
         },
-        { responseType: "blob" },
+        {
+          responseType: "blob",
+          timeout: 600000,
+        },
       );
 
       const blob = new Blob([response.data], { type: "application/zip" });
@@ -244,14 +244,9 @@ const AIAgentPage = () => {
     link.click();
   };
 
-  const handleSignOut = async () => {
-    await logout();
-    router.replace("/login");
-  };
-
   return (
     <div className="min-h-screen bg-black cyber-grid text-slate-300 font-sans">
-      <Navbar hideAuthActions />
+      <Navbar />
       <div className="max-w-4xl mx-auto space-y-12 px-6 md:px-8 pt-28 pb-12">
         <section>
           <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -266,13 +261,6 @@ const AIAgentPage = () => {
                 processed security signatures to the dashboard in real-time.
               </p>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-colors text-sm font-medium"
-            >
-              <LogOut size={14} />
-              Sign out
-            </button>
           </div>
         </section>
 

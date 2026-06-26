@@ -1547,3 +1547,29 @@ async def admin_user_distribution():
     except Exception as e:
         print(f"Admin user distribution error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/admin/agents")
+async def admin_agents():
+    """
+    Fetch admin agents table data with inferred status buckets.
+    """
+    try:
+        agents_data = SupabaseOps.get_admin_agents_data()
+        return agents_data
+    except Exception as e:
+        print(f"Admin agents error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/admin/users")
+async def admin_users():
+    """
+    Fetch full users details from Supabase for admin view.
+    """
+    try:
+        users_data = SupabaseOps.get_admin_users_details()
+        return users_data
+    except Exception as e:
+        print(f"Admin users error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

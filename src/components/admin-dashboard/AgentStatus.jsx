@@ -1,7 +1,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
-import { agentsData } from './data/mockData'
+import { agentsData as defaultAgentsData } from './data/mockData'
 
 /* ── Status Styles ── */
 const statusColor = {
@@ -9,12 +9,6 @@ const statusColor = {
   offline: { dot: 'bg-red-400',     badge: 'bg-red-400/10 text-red-400 border-red-400/20',             label: 'Offline' },
   idle:    { dot: 'bg-yellow-400',  badge: 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20',    label: 'Idle' },
 }
-
-const pieData = [
-  { name: 'Online',  value: agentsData.online,  color: '#34d399' },
-  { name: 'Offline', value: agentsData.offline, color: '#f87171' },
-  { name: 'Idle',    value: agentsData.idle,    color: '#fbbf24' },
-]
 
 /* ── Tooltip ── */
 const CustomTooltip = ({ active, payload }) => {
@@ -29,7 +23,15 @@ const CustomTooltip = ({ active, payload }) => {
 }
 
 /* ── MAIN COMPONENT ── */
-export default function AgentStatus() {
+export default function AgentStatus({ agentsData = defaultAgentsData }) {
+  const pieData = [
+    { name: 'Online',  value: Number(agentsData?.online || 0),  color: '#34d399' },
+    { name: 'Offline', value: Number(agentsData?.offline || 0), color: '#f87171' },
+    { name: 'Idle',    value: Number(agentsData?.idle || 0),    color: '#fbbf24' },
+  ]
+
+  const agentRows = Array.isArray(agentsData?.agents) ? agentsData.agents : []
+
   return (
     <div className="flex flex-col gap-12">
 
@@ -81,7 +83,7 @@ export default function AgentStatus() {
               Total Agents:
             </span>
             <span className="mono text-sm font-semibold text-white ml-2">
-              {agentsData.total}
+              {Number(agentsData?.total || 0)}
             </span>
           </div>
         </div>
@@ -108,7 +110,7 @@ export default function AgentStatus() {
 
           {/* Body */}
           <tbody>
-            {agentsData.agents.map((agent, i) => {
+            {agentRows.map((agent, i) => {
               const s = statusColor[agent.status]
 
               return (

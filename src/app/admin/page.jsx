@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -15,6 +15,7 @@ import {
   Bell,
   LogOut,
   X,
+  RefreshCw,
 } from "lucide-react";
 
 import ProtectedRoute from "../../components/auth/ProtectedRoute";
@@ -35,7 +36,11 @@ import BrandLogo from "../../components/BrandLogo";
 import {
   globalStats as defaultGlobalStats,
   ingestionStats as defaultIngestionStats,
+  ingestionData as defaultIngestionData,
+  threatData as defaultThreatData,
+  riskMatrixData as defaultRiskMatrixData,
   professionData as defaultProfessionData,
+  agentsData as defaultAgentsData,
 } from "../../components/admin-dashboard/data/mockData";
 
 function Section({ title, icon: Icon, children }) {
@@ -64,18 +69,18 @@ function Navbar({ setHelpOpen, onSignOut }) {
           </button>
 
           <button
+            onClick={() => setHelpOpen(true)}
+            className="text-xs px-4 py-2 border border-slate-700 rounded-lg text-sky-300 hover:bg-white/5"
+          >
+            Help
+          </button>
+
+          <button
             onClick={onSignOut}
             className="text-xs px-4 py-2 border border-red-500/30 rounded-lg text-red-300 hover:bg-red-500/10 inline-flex items-center gap-1.5"
           >
             <LogOut size={13} />
             Sign out
-          </button>
-
-          <button
-            onClick={() => setHelpOpen(true)}
-            className="text-xs px-4 py-2 border border-slate-700 rounded-lg text-sky-300 hover:bg-white/5"
-          >
-            Help
           </button>
         </div>
       </div>
@@ -110,81 +115,124 @@ function AdminDashboardContent() {
   const router = useRouter();
   const { isAdmin, isReady, logout, user } = useAuth();
   const [helpOpen, setHelpOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [globalStats, setGlobalStats] = useState(null);
-  const [ingestionStats, setIngestionStats] = useState(null);
-  const [threatData, setThreatData] = useState(null);
-  const [riskMatrixData, setRiskMatrixData] = useState(null);
-  const [professionData, setProfessionData] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [globalStats, setGlobalStats] = useState(defaultGlobalStats);
+  const [ingestionStats, setIngestionStats] = useState(defaultIngestionStats);
+  const [threatData, setThreatData] = useState(defaultThreatData);
+  const [riskMatrixData, setRiskMatrixData] = useState(defaultRiskMatrixData);
+  const [professionData, setProfessionData] = useState(defaultProfessionData);
+  const [agentsData, setAgentsData] = useState(defaultAgentsData);
+  const [ingestionData, setIngestionData] = useState(defaultIngestionData);
+  const [usersDetails, setUsersDetails] = useState([]);
+  const initialFetchDoneRef = useRef(false);
 
   const handleSignOut = async () => {
     await logout();
     router.replace("/login");
   };
 
-  // Fetch admin analytics data on component mount
+  const fetchAdminData = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      const token = user?.id ? await getAuthToken() : null;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      const [statsRes, riskRes, categoriesRes, healthRes, heatmapRes, professionRes, agentsRes, usersRes] = await Promise.all([
+        fetch("/api/admin/stats", { headers }).catch(() => ({})),
+        fetch("/api/admin/risk-distribution", { headers }).catch(() => ({})),
+        fetch("/api/admin/api-categories", { headers }).catch(() => ({})),
+        fetch("/api/admin/system-health", { headers }).catch(() => ({})),
+        fetch("/api/admin/heatmap", { headers }).catch(() => ({})),
+        fetch("/api/admin/user-distribution", { headers }).catch(() => ({})),
+        fetch("/api/admin/agents", { headers }).catch(() => ({})),
+        fetch("/api/admin/users", { headers }).catch(() => ({})),
+      ]);
+
+      if (statsRes.ok) {
+        const data = await statsRes.json();
+        setGlobalStats(data.globalStats || defaultGlobalStats);
+      }
+
+      if (healthRes.ok) {
+        const data = await healthRes.json();
+        setIngestionStats(data.ingestionStats || defaultIngestionStats);
+        setIngestionData(
+          Array.isArray(data.ingestionData) && data.ingestionData.length > 0
+            ? data.ingestionData
+            : defaultIngestionData,
+        );
+      }
+
+      if (riskRes.ok) {
+        const riskData = await riskRes.json();
+        const donut = riskData.threatData?.donut || defaultThreatData.donut;
+        setThreatData((prev) => ({
+          donut,
+          categories: prev?.categories || defaultThreatData.categories,
+        }));
+      }
+
+      if (categoriesRes.ok) {
+        const catData = await categoriesRes.json();
+        const categories = catData.threatData?.categories || defaultThreatData.categories;
+        setThreatData((prev) => ({
+          donut: prev?.donut || defaultThreatData.donut,
+          categories,
+        }));
+      }
+
+      if (heatmapRes.ok) {
+        const data = await heatmapRes.json();
+        setRiskMatrixData(data.riskMatrixData || defaultRiskMatrixData);
+      }
+
+      if (professionRes.ok) {
+        const data = await professionRes.json();
+        const profData = data.professionData || [];
+        if (profData.length > 0) {
+          setProfessionData(profData);
+        }
+      }
+
+      if (agentsRes.ok) {
+        const data = await agentsRes.json();
+        const agents = data?.agentsData;
+        if (agents && Array.isArray(agents.agents)) {
+          setAgentsData(agents);
+        }
+      }
+
+      if (usersRes.ok) {
+        const data = await usersRes.json();
+        const users = Array.isArray(data?.users) ? data.users : [];
+        setUsersDetails(users);
+      }
+    } catch (error) {
+      console.error("Error fetching admin data:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     if (!isReady || !isAdmin) return;
+    setGlobalStats(defaultGlobalStats);
+    setIngestionStats(defaultIngestionStats);
+    setThreatData(defaultThreatData);
+    setRiskMatrixData(defaultRiskMatrixData);
+    setProfessionData(defaultProfessionData);
+    setAgentsData(defaultAgentsData);
+    setIngestionData(defaultIngestionData);
+    setUsersDetails([]);
+  }, [isReady, isAdmin]);
 
-    const fetchAdminData = async () => {
-      try {
-        setLoading(true);
-        const token = user?.id ? await getAuthToken() : null;
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  useEffect(() => {
+    if (!isReady || !isAdmin) return;
+    if (initialFetchDoneRef.current) return;
 
-        // Fetch all admin stats in parallel
-        const [statsRes, riskRes, categoriesRes, healthRes, heatmapRes, professionRes] = await Promise.all([
-          fetch("/api/admin/stats", { headers }).catch(() => ({})),
-          fetch("/api/admin/risk-distribution", { headers }).catch(() => ({})),
-          fetch("/api/admin/api-categories", { headers }).catch(() => ({})),
-          fetch("/api/admin/system-health", { headers }).catch(() => ({})),
-          fetch("/api/admin/heatmap", { headers }).catch(() => ({})),
-          fetch("/api/admin/user-distribution", { headers }).catch(() => ({})),
-        ]);
-
-        // Parse successful responses
-        if (statsRes.ok) {
-          const data = await statsRes.json();
-          setGlobalStats(data.globalStats || defaultGlobalStats);
-        }
-
-        if (healthRes.ok) {
-          const data = await healthRes.json();
-          setIngestionStats(data.ingestionStats || defaultIngestionStats);
-        }
-
-        if (riskRes.ok && categoriesRes.ok) {
-          const riskData = await riskRes.json();
-          const catData = await categoriesRes.json();
-          setThreatData({
-            donut: riskData.threatData?.donut || [],
-            categories: catData.threatData?.categories || [],
-          });
-        }
-
-        if (heatmapRes.ok) {
-          const data = await heatmapRes.json();
-          setRiskMatrixData(data.riskMatrixData);
-        }
-
-        if (professionRes.ok) {
-          const data = await professionRes.json();
-          const profData = data.professionData || [];
-          // Only set if we have real data, otherwise keep mock
-          if (profData.length > 0) {
-            setProfessionData(profData);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching admin data:", error);
-        // Fall back to defaults which are already set
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    initialFetchDoneRef.current = true;
     fetchAdminData();
-  }, [isReady, isAdmin, user]);
+  }, [isReady, isAdmin, fetchAdminData]);
 
   useEffect(() => {
     if (!isReady) return;
@@ -209,53 +257,40 @@ function AdminDashboardContent() {
       <main className="max-w-[1400px] mx-auto px-8 lg:px-12 pt-8 pb-12 space-y-12">
         <div>
           <h1 className="text-2xl font-semibold text-white mb-2">Security Overview</h1>
-          <p className="text-sm text-slate-400">
-            {loading ? "Loading live data..." : "Real-time visibility across APIs and agents"}
-          </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <p className="text-sm text-slate-400">Mock data shown by default. Use refresh to pull live admin data.</p>
+            <button
+              onClick={fetchAdminData}
+              disabled={refreshing}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-700 text-slate-200 hover:bg-white/5 disabled:opacity-60"
+            >
+              <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+              {refreshing ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8">
-          {loading ? (
-            <>
-              <div className="h-20 bg-slate-800/50 rounded-lg animate-pulse" />
-              <div className="h-20 bg-slate-800/50 rounded-lg animate-pulse" />
-              <div className="h-20 bg-slate-800/50 rounded-lg animate-pulse" />
-              <div className="h-20 bg-slate-800/50 rounded-lg animate-pulse" />
-            </>
-          ) : globalStats ? (
-            <>
-              <StatCard icon={Users} label="Users" value={globalStats.totalUsers} />
-              <StatCard icon={Bot} label="Agents" value={globalStats.activeAgents} />
-              <StatCard icon={Activity} label="Online" value={globalStats.onlineAgents} />
-              <StatCard icon={Globe} label="Regions" value={globalStats.regionsCovered} />
-            </>
-          ) : null}
+          <StatCard icon={Users} label="Users" value={globalStats.totalUsers} />
+          <StatCard icon={Bot} label="Agents" value={globalStats.activeAgents} />
+          <StatCard icon={Activity} label="Online" value={globalStats.onlineAgents} />
+          <StatCard icon={Globe} label="Regions" value={globalStats.regionsCovered} />
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           <Section title="System Health" icon={Database}>
-            {loading ? (
-              <div className="space-y-4">
-                <div className="h-10 bg-slate-800/50 rounded animate-pulse" />
-                <div className="h-32 bg-slate-800/50 rounded animate-pulse" />
-                <div className="h-48 bg-slate-800/50 rounded animate-pulse" />
+            <>
+              <p className="text-3xl text-white">{ingestionStats.totalLogsAnalyzed.toLocaleString()}</p>
+              <LatencyGauge value={ingestionStats.avgLatencyMs} max={100} />
+              <div className="h-[220px]">
+                <LogsLineChart data={ingestionData} />
               </div>
-            ) : ingestionStats ? (
-              <>
-                <p className="text-3xl text-white">{ingestionStats.totalLogsAnalyzed.toLocaleString()}</p>
-                <LatencyGauge value={ingestionStats.avgLatencyMs} max={100} />
-                <div className="h-[220px]">
-                  <LogsLineChart />
-                </div>
-              </>
-            ) : null}
+            </>
           </Section>
 
           <Section title="Risk Distribution" icon={AlertTriangle}>
             <div className="h-[260px]">
-              {loading ? (
-                <div className="w-full h-full bg-slate-800/50 rounded animate-pulse" />
-              ) : threatData?.donut ? (
+              {threatData?.donut ? (
                 <ThreatDonut data={threatData.donut} />
               ) : null}
             </div>
@@ -264,9 +299,7 @@ function AdminDashboardContent() {
 
         <Section title="API Categories" icon={Flame}>
           <div className="h-[260px]">
-            {loading ? (
-              <div className="w-full h-full bg-slate-800/50 rounded animate-pulse" />
-            ) : threatData?.categories ? (
+            {threatData?.categories ? (
               <APICategories data={threatData.categories} />
             ) : null}
           </div>
@@ -274,34 +307,86 @@ function AdminDashboardContent() {
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           <Section title="Global Risk" icon={Globe}>
-            {loading ? (
-              <div className="w-full h-64 bg-slate-800/50 rounded animate-pulse" />
-            ) : riskMatrixData ? (
+            {riskMatrixData ? (
               <Heatmap data={riskMatrixData} />
             ) : null}
           </Section>
 
           <Section title="Agents" icon={Bot}>
-            {loading ? (
-              <div className="w-full h-64 bg-slate-800/50 rounded animate-pulse" />
-            ) : (
-              <AgentStatus />
-            )}
+            <AgentStatus agentsData={agentsData} />
           </Section>
         </div>
 
         <Section title="User Insights" icon={Users}>
-          {loading ? (
-            <div className="space-y-3">
-              <div className="h-8 bg-slate-800/50 rounded animate-pulse" />
-              <div className="h-8 bg-slate-800/50 rounded animate-pulse" />
-              <div className="h-8 bg-slate-800/50 rounded animate-pulse" />
-              <div className="h-8 bg-slate-800/50 rounded animate-pulse" />
-              <div className="h-8 bg-slate-800/50 rounded animate-pulse" />
+          <div className="space-y-6">
+            {professionData && professionData.length > 0 ? (
+              <ProfessionBar data={professionData} />
+            ) : null}
+
+            <div className="overflow-x-auto rounded-2xl border border-slate-700/30">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-700/40 bg-white/[0.02]">
+                    {[
+                      "Name",
+                      "Email",
+                      "Role",
+                      "Country",
+                      "Admin",
+                      "APIs",
+                      "Alerts",
+                      "Agents",
+                      "Last Activity",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="text-left py-3 px-4 text-slate-500 font-medium uppercase tracking-wider text-[11px]"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {usersDetails.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-6 px-4 text-slate-500 text-center">
+                        No users data loaded yet. Click Refresh to fetch from Supabase.
+                      </td>
+                    </tr>
+                  ) : (
+                    usersDetails.map((u) => (
+                      <tr key={u.id} className="border-b border-slate-800/30 hover:bg-white/[0.02] transition">
+                        <td className="py-3 px-4 text-white font-medium">{u.full_name || "-"}</td>
+                        <td className="py-3 px-4 text-slate-300">{u.email || "-"}</td>
+                        <td className="py-3 px-4 text-slate-300">{u.role || "-"}</td>
+                        <td className="py-3 px-4 text-slate-300">{u.country || "-"}</td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs border ${
+                              u.is_admin
+                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
+                                : "bg-slate-500/10 text-slate-400 border-slate-500/25"
+                            }`}
+                          >
+                            {u.is_admin ? "Yes" : "No"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-300">{Number(u.api_count || 0)}</td>
+                        <td className="py-3 px-4 text-slate-300">{Number(u.risk_alert_count || 0)}</td>
+                        <td className="py-3 px-4 text-slate-300">{Number(u.agent_count || 0)}</td>
+                        <td className="py-3 px-4 text-slate-400">
+                          {u.last_activity
+                            ? new Date(u.last_activity).toLocaleString()
+                            : "-"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
-          ) : professionData && professionData.length > 0 ? (
-            <ProfessionBar data={professionData} />
-          ) : null}
+          </div>
         </Section>
 
         <Section title="Privacy" icon={ShieldCheck}>

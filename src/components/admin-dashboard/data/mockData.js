@@ -58,16 +58,14 @@ export const riskMatrixData = {
 };
 
 export const agentsData = {
-  total: 48,
-  online: 41,
-  offline: 4,
-  idle: 3,
+  total: 3,
+  online: 2,
+  offline: 1,
+  idle: 0,
   agents: [
     { id: "AG-1001", name: "Aegis Core", region: "NA", status: "online", load: 72 },
     { id: "AG-1002", name: "Risk Mapper", region: "EU", status: "online", load: 63 },
-    { id: "AG-1003", name: "Latency Guard", region: "IN", status: "idle", load: 34 },
-    { id: "AG-1004", name: "Threat Lens", region: "APAC", status: "online", load: 81 },
-    { id: "AG-1005", name: "Shadow Hunter", region: "MEA", status: "offline", load: 0 },
+    { id: "AG-1003", name: "Shadow Hunter", region: "APAC", status: "offline", load: 0 },
   ],
 };
 

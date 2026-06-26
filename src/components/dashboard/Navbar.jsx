@@ -27,7 +27,7 @@ export default function Navbar({ alerts = [], lastUpdated, displayName = "User",
 
   const handleLogout = async () => {
     await logout();
-    router.replace("/");
+    router.replace("/login");
   };
 
   return (

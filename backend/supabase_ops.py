@@ -561,29 +561,41 @@ class SupabaseOps:
         Returns: totalUsers, activeAgents (unique user count from api_analysis), onlineAgents, regionsCovered
         """
         try:
-            # Count unique users with uploads
-            user_count_result = supabase.table("api_analysis").select("user_id", count="exact").execute()
-            unique_users = len(set([r["user_id"] for r in user_count_result.data])) if user_count_result.data else 0
-
-            # Count total APIs analyzed (as proxy for agents)
-            total_apis = len(user_count_result.data) if user_count_result.data else 0
-
-            # Estimate online agents based on recent activity (last 24 hours)
             from datetime import datetime, timedelta
-            last_24h = (datetime.utcnow() - timedelta(hours=24)).isoformat()
-            recent_result = supabase.table("api_analysis").select("id", count="exact").gte("updated_at", last_24h).execute()
-            online_agents = max(int(len(recent_result.data) * 0.85), 0)  # 85% uptime estimate
 
-            # Count unique regions from user profiles
-            profiles_result = supabase.table("profiles").select("country").execute()
-            regions = len(set([r["country"] for r in profiles_result.data if r.get("country")])) if profiles_result.data else 0
+            profiles_result = supabase.table("profiles").select("id, country").execute()
+            profile_rows = profiles_result.data or []
+            profile_user_ids = {r.get("id") for r in profile_rows if r.get("id")}
+
+            analysis_users_result = supabase.table("api_analysis").select("user_id").execute()
+            analysis_rows = analysis_users_result.data or []
+            analysis_user_ids = {r.get("user_id") for r in analysis_rows if r.get("user_id")}
+
+            total_users = len(profile_user_ids.union(analysis_user_ids))
+
+            agents_result = supabase.table("agents").select("id, updated_at, created_at").execute()
+            agent_rows = agents_result.data or []
+            active_agents = len(agent_rows)
+
+            now = datetime.utcnow()
+            online_cutoff = now - timedelta(hours=24)
+            online_agents = 0
+            for row in agent_rows:
+                ts_raw = row.get("updated_at") or row.get("created_at")
+                ts = pd.to_datetime(ts_raw, utc=True, errors="coerce")
+                if ts is not None and not pd.isna(ts):
+                    ts_naive = ts.tz_convert("UTC").tz_localize(None)
+                    if ts_naive >= online_cutoff:
+                        online_agents += 1
+
+            regions = len({r.get("country") for r in profile_rows if r.get("country")})
 
             return {
                 "globalStats": {
-                    "totalUsers": unique_users,
-                    "activeAgents": min(total_apis // 10, 100),  # ~1 agent per 10 APIs analyzed
-                    "onlineAgents": online_agents // 50 if online_agents > 0 else 5,
-                    "regionsCovered": regions
+                    "totalUsers": int(total_users),
+                    "activeAgents": int(active_agents),
+                    "onlineAgents": int(online_agents),
+                    "regionsCovered": int(regions),
                 }
             }
         except Exception as e:
@@ -604,14 +616,13 @@ class SupabaseOps:
         Returns: threatData.donut with Critical, High, Medium, Low counts
         """
         try:
-            result = supabase.table("api_analysis").select("risk_level, count").execute()
-            
+            result = supabase.table("api_analysis").select("risk_level").execute()
+
             risk_counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
-            if result.data:
-                risk_df = pd.DataFrame(result.data)
-                for risk_level in risk_counts.keys():
-                    count = len(risk_df[risk_df["risk_level"] == risk_level])
-                    risk_counts[risk_level] = count
+            for row in (result.data or []):
+                level = str(row.get("risk_level") or "LOW").upper()
+                if level in risk_counts:
+                    risk_counts[level] += 1
             
             return {
                 "threatData": {
@@ -644,7 +655,7 @@ class SupabaseOps:
         Returns: threatData.categories with suspicious and zombie counts per category
         """
         try:
-            result = supabase.table("api_analysis").select("endpoint, is_zombie, is_shadow_api").execute()
+            result = supabase.table("api_analysis").select("endpoint, is_zombie, is_shadow_api, risk_level").execute()
             
             # Categorize endpoints by pattern
             categories = {
@@ -672,7 +683,9 @@ class SupabaseOps:
                     elif any(x in endpoint for x in ["report", "analytics", "export"]):
                         category = "Reports"
                     
-                    if is_shadow:
+                    is_high_risk = str(api.get("risk_level") or "").upper() in {"HIGH", "CRITICAL"}
+
+                    if is_shadow or is_high_risk:
                         categories[category]["suspicious"] += 1
                     if is_zombie:
                         categories[category]["zombie"] += 1
@@ -705,24 +718,72 @@ class SupabaseOps:
         Fetch system health metrics: total logs analyzed, average latency
         """
         try:
-            # Total logs = sum of all call counts
-            api_result = supabase.table("api_analysis").select("call_count, avg_latency").execute()
-            
+            api_result = supabase.table("api_analysis").select("call_count, avg_latency, avg_response_time, updated_at").execute()
+
             total_logs = 0
             latencies = []
-            
-            if api_result.data:
-                api_df = pd.DataFrame(api_result.data)
-                total_logs = int(api_df["call_count"].sum())
-                latencies = api_df["avg_latency"].tolist()
-            
+            ingestion_data = []
+
+            api_rows = api_result.data or []
+            if api_rows:
+                api_df = pd.DataFrame(api_rows)
+                total_logs = int(api_df["call_count"].fillna(0).sum())
+
+                latency_series = api_df.get("avg_latency")
+                if latency_series is None or latency_series.isna().all():
+                    latency_series = api_df.get("avg_response_time")
+                if latency_series is not None:
+                    latencies = [float(v) for v in latency_series.fillna(0).tolist() if float(v) > 0]
+
+                if "updated_at" in api_df.columns:
+                    ts = pd.to_datetime(api_df["updated_at"], utc=True, errors="coerce")
+                    temp_df = pd.DataFrame({
+                        "ts": ts,
+                        "calls": api_df["call_count"].fillna(0),
+                    }).dropna(subset=["ts"])
+
+                    if not temp_df.empty:
+                        temp_df["bucket"] = temp_df["ts"].dt.floor("h")
+                        grouped = (
+                            temp_df.groupby("bucket", as_index=False)["calls"]
+                            .sum()
+                            .sort_values("bucket")
+                            .tail(8)
+                        )
+                        ingestion_data = [
+                            {"time": row["bucket"].strftime("%H:%M"), "logs": int(row["calls"])}
+                            for _, row in grouped.iterrows()
+                        ]
+
+            if not ingestion_data:
+                sessions = supabase.table("upload_sessions").select("created_at, log_count, processed_count").execute()
+                session_rows = sessions.data or []
+                if session_rows:
+                    session_df = pd.DataFrame(session_rows)
+                    session_df["ts"] = pd.to_datetime(session_df["created_at"], utc=True, errors="coerce")
+                    session_df["logs"] = session_df["processed_count"].fillna(session_df["log_count"]).fillna(0)
+                    session_df = session_df.dropna(subset=["ts"])
+                    if not session_df.empty:
+                        session_df["bucket"] = session_df["ts"].dt.floor("h")
+                        grouped = (
+                            session_df.groupby("bucket", as_index=False)["logs"]
+                            .sum()
+                            .sort_values("bucket")
+                            .tail(8)
+                        )
+                        ingestion_data = [
+                            {"time": row["bucket"].strftime("%H:%M"), "logs": int(row["logs"])}
+                            for _, row in grouped.iterrows()
+                        ]
+
             avg_latency = round(sum(latencies) / len(latencies)) if latencies else 28
-            
+
             return {
                 "ingestionStats": {
-                    "totalLogsAnalyzed": total_logs,
-                    "avgLatencyMs": avg_latency
-                }
+                    "totalLogsAnalyzed": int(total_logs),
+                    "avgLatencyMs": int(avg_latency),
+                },
+                "ingestionData": ingestion_data,
             }
         except Exception as e:
             print(f"Error fetching admin system health: {e}")
@@ -730,7 +791,8 @@ class SupabaseOps:
                 "ingestionStats": {
                     "totalLogsAnalyzed": 0,
                     "avgLatencyMs": 0
-                }
+                },
+                "ingestionData": [],
             }
 
     @staticmethod
@@ -837,4 +899,210 @@ class SupabaseOps:
             print(f"Error fetching admin user distribution: {e}")
             return {
                 "professionData": []
+            }
+
+    @staticmethod
+    def get_admin_users_details() -> Dict[str, Any]:
+        """
+        Fetch full admin users list from profiles and related activity tables.
+        Returns per-user: name, email, role, country, is_admin, created_at,
+        api_count, risk_alert_count, agent_count, last_activity.
+        """
+        try:
+            profiles_result = supabase.table("profiles").select(
+                "id, full_name, role, country, is_admin, created_at, updated_at"
+            ).execute()
+            profile_rows = profiles_result.data or []
+
+            api_result = supabase.table("api_analysis").select(
+                "user_id, endpoint, updated_at"
+            ).execute()
+            api_rows = api_result.data or []
+
+            alert_result = supabase.table("risk_alerts").select(
+                "user_id, created_at"
+            ).execute()
+            alert_rows = alert_result.data or []
+
+            agents_result = supabase.table("agents").select(
+                "user_id, created_at, updated_at"
+            ).execute()
+            agent_rows = agents_result.data or []
+
+            api_count_by_user: Dict[str, int] = {}
+            last_api_by_user: Dict[str, Any] = {}
+            for row in api_rows:
+                uid = row.get("user_id")
+                if not uid:
+                    continue
+                api_count_by_user[uid] = api_count_by_user.get(uid, 0) + 1
+                ts = pd.to_datetime(row.get("updated_at"), utc=True, errors="coerce")
+                if ts is not None and not pd.isna(ts):
+                    prev = last_api_by_user.get(uid)
+                    if prev is None or ts > prev:
+                        last_api_by_user[uid] = ts
+
+            alerts_by_user: Dict[str, int] = {}
+            last_alert_by_user: Dict[str, Any] = {}
+            for row in alert_rows:
+                uid = row.get("user_id")
+                if not uid:
+                    continue
+                alerts_by_user[uid] = alerts_by_user.get(uid, 0) + 1
+                ts = pd.to_datetime(row.get("created_at"), utc=True, errors="coerce")
+                if ts is not None and not pd.isna(ts):
+                    prev = last_alert_by_user.get(uid)
+                    if prev is None or ts > prev:
+                        last_alert_by_user[uid] = ts
+
+            agents_by_user: Dict[str, int] = {}
+            last_agent_by_user: Dict[str, Any] = {}
+            for row in agent_rows:
+                uid = row.get("user_id")
+                if not uid:
+                    continue
+                agents_by_user[uid] = agents_by_user.get(uid, 0) + 1
+                ts = pd.to_datetime(
+                    row.get("updated_at") or row.get("created_at"),
+                    utc=True,
+                    errors="coerce",
+                )
+                if ts is not None and not pd.isna(ts):
+                    prev = last_agent_by_user.get(uid)
+                    if prev is None or ts > prev:
+                        last_agent_by_user[uid] = ts
+
+            users = []
+            for profile in profile_rows:
+                uid = profile.get("id")
+                if not uid:
+                    continue
+
+                email = SupabaseOps.get_user_email(uid)
+
+                candidates = [
+                    pd.to_datetime(profile.get("updated_at"), utc=True, errors="coerce"),
+                    last_api_by_user.get(uid),
+                    last_alert_by_user.get(uid),
+                    last_agent_by_user.get(uid),
+                ]
+                valid_candidates = [c for c in candidates if c is not None and not pd.isna(c)]
+                last_activity = max(valid_candidates).isoformat() if valid_candidates else None
+
+                users.append({
+                    "id": uid,
+                    "full_name": profile.get("full_name") or "Unnamed User",
+                    "email": email or "",
+                    "role": profile.get("role") or "Unassigned",
+                    "country": profile.get("country") or "N/A",
+                    "is_admin": bool(profile.get("is_admin")),
+                    "created_at": profile.get("created_at"),
+                    "api_count": int(api_count_by_user.get(uid, 0)),
+                    "risk_alert_count": int(alerts_by_user.get(uid, 0)),
+                    "agent_count": int(agents_by_user.get(uid, 0)),
+                    "last_activity": last_activity,
+                })
+
+            users.sort(
+                key=lambda x: (
+                    pd.to_datetime(x.get("last_activity"), utc=True, errors="coerce")
+                    if x.get("last_activity")
+                    else pd.Timestamp.min.tz_localize("UTC")
+                ),
+                reverse=True,
+            )
+
+            return {"users": users}
+        except Exception as e:
+            print(f"Error fetching admin users details: {e}")
+            return {"users": []}
+
+    @staticmethod
+    def get_admin_agents_data() -> Dict[str, Any]:
+        """
+        Fetch agents list and infer status buckets from last update time.
+        Status inference:
+        - online: updated in last 24h
+        - idle: updated in last 7d but older than 24h
+        - offline: older than 7d
+        """
+        try:
+            result = (
+                supabase
+                .table("agents")
+                .select("id, secret_key, dashboard_url, created_at, updated_at")
+                .order("updated_at", desc=True)
+                .execute()
+            )
+
+            rows = result.data or []
+            now = pd.Timestamp.utcnow()
+
+            agents = []
+            online = 0
+            offline = 0
+            idle = 0
+
+            for idx, row in enumerate(rows):
+                updated_raw = row.get("updated_at") or row.get("created_at")
+                updated_at = pd.to_datetime(updated_raw, utc=True, errors="coerce")
+                age_hours = None
+                if updated_at is not None and not pd.isna(updated_at):
+                    age_hours = max((now - updated_at).total_seconds() / 3600, 0)
+
+                if age_hours is None:
+                    status = "offline"
+                elif age_hours <= 24:
+                    status = "online"
+                elif age_hours <= 24 * 7:
+                    status = "idle"
+                else:
+                    status = "offline"
+
+                if status == "online":
+                    online += 1
+                elif status == "idle":
+                    idle += 1
+                else:
+                    offline += 1
+
+                # Region is not in agents schema; derive a stable placeholder.
+                region_cycle = ["NA", "EU", "IN", "APAC", "MEA"]
+                region = region_cycle[idx % len(region_cycle)]
+
+                # Approximate load from recency so admins can still visualize utilization.
+                if status == "offline":
+                    load = 0
+                elif status == "idle":
+                    load = 25
+                else:
+                    load = 70
+
+                agents.append({
+                    "id": str(row.get("id") or f"AG-{idx+1:04d}"),
+                    "name": f"Agent {idx + 1}",
+                    "region": region,
+                    "status": status,
+                    "load": load,
+                })
+
+            return {
+                "agentsData": {
+                    "total": len(agents),
+                    "online": online,
+                    "offline": offline,
+                    "idle": idle,
+                    "agents": agents,
+                }
+            }
+        except Exception as e:
+            print(f"Error fetching admin agents data: {e}")
+            return {
+                "agentsData": {
+                    "total": 0,
+                    "online": 0,
+                    "offline": 0,
+                    "idle": 0,
+                    "agents": [],
+                }
             }

@@ -26,7 +26,7 @@ export default function Navbar({ hideAuthActions = false }) {
 
   const handleSignOut = async () => {
     await logout();
-    router.replace("/");
+    router.replace("/login");
   };
 
   useEffect(() => {

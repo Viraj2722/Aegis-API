@@ -100,12 +100,12 @@ export function APICategories({ data = defaultThreatData.categories }) {
 }
 
 /* ───────── AREA CHART ───────── */
-export function LogsLineChart() {
+export function LogsLineChart({ data = ingestionData }) {
   return (
     <div className="w-full h-[200px]">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
-          data={ingestionData}
+          data={data}
           margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
         >
           <defs>
