@@ -38,6 +38,11 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 
 
+@app.get("/")
+def health_check():
+    return {"status": "ok"}
+
+
 def normalize_logs_dataframe(logs: List[Dict[str, Any]]) -> pd.DataFrame:
     """Normalize arbitrary API log payloads into a consistent in-memory DataFrame."""
     df = pd.DataFrame(logs)
