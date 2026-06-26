@@ -20,7 +20,8 @@ import shutil
 import sys
 import zipfile
 
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
+load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
 
 app = FastAPI(title="AegisAPI Backend", description="AI Zombie API Detector with Supabase")
 
