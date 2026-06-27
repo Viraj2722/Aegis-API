@@ -83,8 +83,8 @@ export default function Hero() {
               variants={itemVariants}
               className="flex justify-center mb-8"
             >
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass neon-border text-xs font-mono tracking-widest text-green-400 uppercase">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full glass neon-border text-[10px] sm:text-xs font-mono tracking-widest text-green-400 uppercase max-w-[90vw] text-center">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse flex-shrink-0" />
                 API Security Intelligence Platform
               </div>
             </motion.div>

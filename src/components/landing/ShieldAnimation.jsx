@@ -354,7 +354,7 @@ export default function ShieldAnimation({ onComplete }) {
 
           <motion.div
             className="relative"
-            style={{ width: 200, height: 240, perspective: 1000 }}
+            style={{ width: "min(200px, 55vw)", height: "min(240px, 66vw)", perspective: 1000 }}
             animate={
               phase === "pulse"
                 ? { scale: [1, 1.05, 1, 1.08, 1] }
@@ -404,7 +404,7 @@ export default function ShieldAnimation({ onComplete }) {
           </motion.div>
 
           <motion.div
-            className="absolute bottom-16 text-center"
+            className="absolute bottom-8 sm:bottom-16 left-0 right-0 text-center px-4"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: phase === "idle" ? 0 : 0.6, y: 0 }}
             transition={{ delay: 0.5, duration: 0.6 }}

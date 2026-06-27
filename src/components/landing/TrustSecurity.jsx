@@ -185,7 +185,7 @@ export default function TrustSecurity() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <div className="space-y-6">
             {trustPoints.map((point, i) => (
               <motion.div
@@ -208,7 +208,7 @@ export default function TrustSecurity() {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
             {badges.map((badge, i) => (
               <motion.div
                 key={badge.title}

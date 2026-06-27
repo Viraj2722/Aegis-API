@@ -83,7 +83,7 @@ export default function ProductVisual() {
     <section
       ref={ref}
       id="dashboard"
-      className="relative py-24 overflow-hidden"
+      className="relative py-14 md:py-24 overflow-hidden"
     >
       <div
         className="absolute inset-0"
@@ -93,9 +93,9 @@ export default function ProductVisual() {
         }}
       />
 
-      <div className="max-w-6xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <motion.div
-          className="text-center mb-16"
+          className="text-center mb-10 md:mb-16"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
@@ -151,7 +151,7 @@ export default function ProductVisual() {
             </div>
           </div>
 
-          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-3 sm:p-6 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
             <div className="space-y-3">
               {mockData.map((item, i) => (
                 <motion.div

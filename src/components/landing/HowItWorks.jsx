@@ -151,10 +151,10 @@ export default function HowItWorks() {
                     delay: i * 0.15,
                     ease: [0.22, 1, 0.36, 1],
                   }}
-                  className={`relative flex items-center gap-8 md:gap-0 ${isEven ? "md:flex-row" : "md:flex-row-reverse"} mb-12 last:mb-0`}
+                  className={`relative flex items-center gap-8 md:gap-0 ${isEven ? "md:flex-row" : "md:flex-row-reverse"} mb-8 md:mb-12 last:mb-0`}
                 >
                   <div
-                    className={`flex-1 ${isEven ? "md:pr-16 md:text-right" : "md:pl-16 md:text-left"}`}
+                    className={`flex-1 w-full ${isEven ? "md:pr-16 md:text-right" : "md:pl-16 md:text-left"}`}
                   >
                     <motion.div
                       className="glass rounded-2xl p-6 neon-border group cursor-default"
