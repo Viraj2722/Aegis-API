@@ -107,7 +107,7 @@ export default function Features() {
   const isInView = useInView(ref, { once: true, amount: 0.2 });
 
   return (
-    <section ref={ref} id="features" className="relative py-24 overflow-hidden">
+    <section ref={ref} id="features" className="relative py-14 md:py-24 overflow-hidden">
       <div className="absolute inset-0 cyber-grid opacity-50" />
       <div
         className="absolute inset-0"
@@ -117,9 +117,9 @@ export default function Features() {
         }}
       />
 
-      <div className="relative max-w-6xl mx-auto px-6">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
         <motion.div
-          className="text-center mb-16"
+          className="text-center mb-10 md:mb-16"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}

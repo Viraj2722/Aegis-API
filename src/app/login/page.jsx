@@ -55,7 +55,7 @@ export default function LoginPage() {
           <BrandLogo size="md" />
         </div>
 
-        <div className="glass rounded-2xl p-8 glow-blue">
+        <div className="glass rounded-2xl p-5 sm:p-8 glow-blue">
           <h1 className="text-2xl font-bold text-white mb-1">Welcome back</h1>
           <p className="text-slate-400 text-sm mb-6">
             Sign in to your security dashboard

@@ -9,11 +9,11 @@ const links = {
 
 export default function Footer() {
   return (
-    <footer className="relative border-t border-white/5 py-16 overflow-hidden">
+    <footer className="relative border-t border-white/5 py-10 md:py-16 overflow-hidden">
       <div className="absolute inset-0 cyber-grid opacity-20" />
 
-      <div className="relative max-w-6xl mx-auto px-6">
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-12">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-6 md:gap-8 mb-8 md:mb-12">
           <div className="col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none">

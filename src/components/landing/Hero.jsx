@@ -73,7 +73,7 @@ export default function Hero() {
           }}
         />
 
-        <div className="relative z-10 max-w-6xl mx-auto px-6 pt-20 md:pt-24 text-center">
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 md:pt-24 text-center">
           <motion.div
             variants={containerVariants}
             initial="hidden"
@@ -91,13 +91,13 @@ export default function Hero() {
 
             <motion.h1
               variants={itemVariants}
-              className="text-5xl md:text-7xl lg:text-8xl font-black leading-[0.9] tracking-tight mb-6"
+              className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black leading-[0.95] md:leading-[0.9] tracking-tight mb-6"
             >
-              <span className="block whitespace-nowrap">
+              <span className="block">
                 <span className="gradient-text">Expose the</span>{" "}
                 <span className="text-white">Invisible.</span>
               </span>
-              <span className="block whitespace-nowrap">
+              <span className="block">
                 <span className="gradient-text">Secure the</span>{" "}
                 <span className="text-white">Forgotten.</span>
               </span>
@@ -186,7 +186,7 @@ export default function Hero() {
 
             <motion.div
               variants={itemVariants}
-              className="mt-16 grid grid-cols-3 gap-4 max-w-lg mx-auto"
+              className="mt-10 md:mt-16 grid grid-cols-3 gap-2 sm:gap-4 max-w-lg mx-auto"
             >
               {[
                 { value: "99.8%", label: "Detection Rate" },

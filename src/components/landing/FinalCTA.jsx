@@ -9,7 +9,7 @@ export default function FinalCTA() {
   const isInView = useInView(ref, { once: true, amount: 0.4 });
 
   return (
-    <section ref={ref} id="pricing" className="relative py-32 overflow-hidden">
+    <section ref={ref} id="pricing" className="relative py-16 md:py-32 overflow-hidden">
       <div className="absolute inset-0 cyber-grid opacity-30" />
       <div
         className="absolute inset-0"
@@ -29,7 +29,7 @@ export default function FinalCTA() {
         />
       ))}
 
-      <div className="relative max-w-4xl mx-auto px-6 text-center">
+      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 text-center">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}

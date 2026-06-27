@@ -45,7 +45,7 @@ export default function Navbar({ hideAuthActions = false }) {
       }`}
     >
       <div
-        className={`mx-auto max-w-6xl px-6 rounded-2xl neon-border transition-all duration-500 ${
+        className={`mx-auto max-w-6xl px-4 sm:px-6 rounded-2xl neon-border transition-all duration-500 ${
           scrolled ? "glass shadow-2xl" : ""
         }`}
         style={{

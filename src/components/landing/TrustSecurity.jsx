@@ -154,7 +154,7 @@ export default function TrustSecurity() {
   const isInView = useInView(ref, { once: true, amount: 0.2 });
 
   return (
-    <section ref={ref} id="security" className="relative py-24 overflow-hidden">
+    <section ref={ref} id="security" className="relative py-14 md:py-24 overflow-hidden">
       <div className="absolute inset-0 cyber-grid opacity-30" />
       <div
         className="absolute inset-0"
@@ -164,9 +164,9 @@ export default function TrustSecurity() {
         }}
       />
 
-      <div className="relative max-w-6xl mx-auto px-6">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
         <motion.div
-          className="text-center mb-16"
+          className="text-center mb-10 md:mb-16"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
@@ -255,7 +255,7 @@ export default function TrustSecurity() {
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.6 }}
-          className="mt-16 glass rounded-2xl px-8 py-5 flex flex-col md:flex-row items-center justify-between gap-4 neon-border"
+          className="mt-10 md:mt-16 glass rounded-2xl px-4 sm:px-8 py-5 flex flex-col md:flex-row items-center justify-between gap-4 neon-border"
         >
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
@@ -263,7 +263,7 @@ export default function TrustSecurity() {
               All systems operational
             </span>
           </div>
-          <div className="flex items-center gap-8 text-xs text-slate-500">
+          <div className="flex items-center flex-wrap gap-3 md:gap-8 text-xs text-slate-500 justify-center md:justify-start">
             {[
               "GDPR Compliant",
               "ISO 27001",

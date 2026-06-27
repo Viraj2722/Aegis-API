@@ -118,7 +118,7 @@ export default function SignupPage() {
           <BrandLogo size="md" />
         </div>
 
-        <div className="glass rounded-2xl p-8 glow-purple">
+        <div className="glass rounded-2xl p-5 sm:p-8 glow-purple">
           <h1 className="text-2xl font-bold text-white mb-1">Create account</h1>
           <p className="text-slate-400 text-sm mb-6">
             Start monitoring your API security
@@ -187,7 +187,7 @@ export default function SignupPage() {
               </div>
               <StrengthBar password={form.password} />
               {touched.password && (
-                <div className="mt-2 grid grid-cols-2 gap-1">
+                <div className="mt-2 grid grid-cols-1 xs:grid-cols-2 gap-1">
                   <Rule met={rules.minLen} label="8+ characters" />
                   <Rule met={rules.upper} label="Uppercase letter" />
                   <Rule met={rules.digit} label="Number" />

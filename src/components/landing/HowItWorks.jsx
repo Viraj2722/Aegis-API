@@ -99,7 +99,7 @@ export default function HowItWorks() {
   const isInView = useInView(ref, { once: true, amount: 0.2 });
 
   return (
-    <section ref={ref} className="relative py-24">
+    <section ref={ref} className="relative py-14 md:py-24">
       <div
         className="absolute inset-0"
         style={{
@@ -108,9 +108,9 @@ export default function HowItWorks() {
         }}
       />
 
-      <div className="relative max-w-5xl mx-auto px-6">
+      <div className="relative max-w-5xl mx-auto px-4 sm:px-6">
         <motion.div
-          className="text-center mb-16"
+          className="text-center mb-10 md:mb-16"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
