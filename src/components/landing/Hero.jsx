@@ -73,7 +73,7 @@ export default function Hero() {
           }}
         />
 
-        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 md:pt-24 text-center">
+        <div className="relative z-10 max-w-6xl mx-auto px-6 sm:px-6 pt-20 sm:pt-24 md:pt-28 text-center">
           <motion.div
             variants={containerVariants}
             initial="hidden"
@@ -91,7 +91,7 @@ export default function Hero() {
 
             <motion.h1
               variants={itemVariants}
-              className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black leading-[0.95] md:leading-[0.9] tracking-tight mb-6"
+              className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black leading-[1.05] md:leading-[0.9] tracking-tight mb-6"
             >
               <span className="block">
                 <span className="gradient-text">Expose the</span>{" "}
@@ -114,7 +114,7 @@ export default function Hero() {
 
             <motion.div
               variants={itemVariants}
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center w-full max-w-sm sm:max-w-none mx-auto"
             >
               <input
                 ref={fileInputRef}
@@ -127,7 +127,7 @@ export default function Hero() {
                 type="button"
                 onClick={handleAnalyzeLogs}
                 disabled={analyzing}
-                className="btn-primary px-8 py-4 rounded-xl text-white font-semibold text-sm tracking-wide flex items-center gap-2 group"
+                className="btn-primary w-full sm:w-auto px-8 py-4 rounded-xl text-white font-semibold text-sm tracking-wide flex items-center justify-center gap-2 group"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
               >
@@ -148,7 +148,7 @@ export default function Hero() {
               </motion.button>
               <motion.button
                 type="button"
-                className="btn-secondary px-8 py-4 rounded-xl text-green-400 font-semibold text-sm tracking-wide flex items-center gap-2"
+                className="btn-secondary w-full sm:w-auto px-8 py-4 rounded-xl text-green-400 font-semibold text-sm tracking-wide flex items-center justify-center gap-2"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
               >

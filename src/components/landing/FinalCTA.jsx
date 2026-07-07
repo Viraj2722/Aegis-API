@@ -54,7 +54,7 @@ export default function FinalCTA() {
 
           <Link href="/signup">
             <motion.button
-              className="btn-primary px-10 py-5 rounded-2xl text-white font-bold text-base tracking-wide relative overflow-hidden group"
+              className="btn-primary px-6 sm:px-10 py-4 sm:py-5 rounded-2xl text-white font-bold text-sm sm:text-base tracking-wide relative overflow-hidden group"
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.97 }}
               animate={
@@ -78,9 +78,9 @@ export default function FinalCTA() {
                   animation: "shimmer 1.5s infinite",
                 }}
               />
-              <span className="relative flex items-center gap-3">
+              <span className="relative flex items-center gap-2 sm:gap-3">
                 <svg
-                  className="w-5 h-5"
+                  className="w-4 h-4 sm:w-5 sm:h-5 hidden sm:block"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"

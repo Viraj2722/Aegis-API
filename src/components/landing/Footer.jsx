@@ -13,8 +13,8 @@ export default function Footer() {
       <div className="absolute inset-0 cyber-grid opacity-20" />
 
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-6 md:gap-8 mb-8 md:mb-12">
-          <div className="col-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-8 mb-8 md:mb-12">
+          <div className="col-span-1 sm:col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none">
                 <path
@@ -66,22 +66,24 @@ export default function Footer() {
             </div>
           </div>
 
-          {Object.entries(links).map(([category, items]) => (
-            <div key={category}>
-              <h4 className="text-xs font-mono tracking-widest text-slate-500 uppercase mb-3">
-                {category}
-              </h4>
-              <ul className="space-y-2">
-                {items.map((item) => (
-                  <li key={item}>
-                    <span className="text-sm text-slate-500 hover:text-cyan-400 cursor-pointer transition-colors duration-200">
-                      {item}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <div className="grid grid-cols-2 sm:grid-cols-4 col-span-1 sm:col-span-2 md:col-span-4 gap-6 md:gap-8">
+            {Object.entries(links).map(([category, items]) => (
+              <div key={category}>
+                <h4 className="text-xs font-mono tracking-widest text-slate-500 uppercase mb-3">
+                  {category}
+                </h4>
+                <ul className="space-y-2">
+                  {items.map((item) => (
+                    <li key={item}>
+                      <span className="text-sm text-slate-500 hover:text-cyan-400 cursor-pointer transition-colors duration-200">
+                        {item}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div
@@ -92,7 +94,7 @@ export default function Footer() {
           }}
         />
 
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-600">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600 text-center sm:text-left">
           <div>© 2025 AegisAPI, Inc. All rights reserved.</div>
           <div className="flex items-center gap-2 font-mono">
             <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />

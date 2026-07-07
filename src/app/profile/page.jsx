@@ -348,7 +348,7 @@ export default function ProfilePage() {
                 </p>
               )}
 
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
                 <span className={`text-xs ${isComplete ? "text-emerald-400" : "text-amber-400"}`}>
                   {isComplete
                     ? "Profile complete. Upload is enabled on dashboard."
@@ -357,7 +357,7 @@ export default function ProfilePage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm disabled:opacity-60"
                 >
                   <Save size={14} />
                   {saving ? "Saving..." : "Save"}

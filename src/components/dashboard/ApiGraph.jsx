@@ -143,8 +143,8 @@ export default function ApiGraph({ graphData, clusterMode, onToggleCluster }) {
     if (!host) return;
 
     const update = () => {
-      const width = Math.max(720, Math.floor(host.clientWidth));
-      const height = Math.max(460, Math.min(640, Math.floor(width * 0.42)));
+      const width = Math.max(280, Math.floor(host.clientWidth));
+      const height = Math.max(350, Math.min(640, Math.floor(width * (width < 600 ? 1 : 0.42))));
       setCanvasSize({ width, height });
     };
 

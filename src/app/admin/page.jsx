@@ -58,29 +58,29 @@ function Section({ title, icon: Icon, children }) {
 function Navbar({ setHelpOpen, onSignOut }) {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-800/50 bg-[#050a14]/90 backdrop-blur-lg">
-      <div className="max-w-[1400px] mx-auto px-8 lg:px-12 h-16 flex items-center justify-between">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 h-14 sm:h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <BrandLogo size="sm" href="/admin" />
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button className="p-2 rounded-lg hover:bg-white/5" aria-label="Notifications">
             <Bell size={16} className="text-slate-400" />
           </button>
 
           <button
             onClick={() => setHelpOpen(true)}
-            className="text-xs px-4 py-2 border border-slate-700 rounded-lg text-sky-300 hover:bg-white/5"
+            className="text-xs px-3 sm:px-4 py-2 border border-slate-700 rounded-lg text-sky-300 hover:bg-white/5"
           >
             Help
           </button>
 
           <button
             onClick={onSignOut}
-            className="text-xs px-4 py-2 border border-red-500/30 rounded-lg text-red-300 hover:bg-red-500/10 inline-flex items-center gap-1.5"
+            className="text-xs px-3 sm:px-4 py-2 border border-red-500/30 rounded-lg text-red-300 hover:bg-red-500/10 inline-flex items-center gap-1.5"
           >
             <LogOut size={13} />
-            Sign out
+            <span className="hidden sm:inline">Sign out</span>
           </button>
         </div>
       </div>
@@ -94,14 +94,15 @@ function HelpDrawer({ open, onClose }) {
       {open && <div className="fixed inset-0 bg-black/60 z-40" onClick={onClose} />}
 
       <motion.div
-        className="fixed right-0 top-0 h-full w-80 bg-[#060d1a] z-50 p-8 overflow-y-auto border-l border-slate-700/40"
+        className="fixed right-0 top-0 h-full w-full sm:w-80 bg-[#060d1a] z-50 p-6 sm:p-8 overflow-y-auto border-l border-slate-700/40"
         initial={{ x: "100%" }}
         animate={{ x: open ? 0 : "100%" }}
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
       >
-        <div className="flex justify-between mb-8">
+        <div className="flex justify-between mb-6 sm:mb-8">
           <span className="text-white font-semibold">Help</span>
-          <button onClick={onClose} aria-label="Close help">
-            <X className="text-slate-400" />
+          <button onClick={onClose} aria-label="Close help" className="p-1 rounded-lg hover:bg-white/5">
+            <X className="text-slate-400" size={20} />
           </button>
         </div>
 
@@ -254,9 +255,9 @@ function AdminDashboardContent() {
       <Navbar setHelpOpen={setHelpOpen} onSignOut={handleSignOut} />
       <HelpDrawer open={helpOpen} onClose={() => setHelpOpen(false)} />
 
-      <main className="max-w-[1400px] mx-auto px-8 lg:px-12 pt-8 pb-12 space-y-12">
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 pt-6 sm:pt-8 pb-12 space-y-8 sm:space-y-10 lg:space-y-12">
         <div>
-          <h1 className="text-2xl font-semibold text-white mb-2">Security Overview</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-white mb-2">Security Overview</h1>
           <div className="flex items-center gap-3 flex-wrap">
             <p className="text-sm text-slate-400">Mock data shown by default. Use refresh to pull live admin data.</p>
             <button
@@ -270,26 +271,26 @@ function AdminDashboardContent() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
           <StatCard icon={Users} label="Users" value={globalStats.totalUsers} />
           <StatCard icon={Bot} label="Agents" value={globalStats.activeAgents} />
           <StatCard icon={Activity} label="Online" value={globalStats.onlineAgents} />
           <StatCard icon={Globe} label="Regions" value={globalStats.regionsCovered} />
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
           <Section title="System Health" icon={Database}>
             <>
-              <p className="text-3xl text-white">{ingestionStats.totalLogsAnalyzed.toLocaleString()}</p>
+              <p className="text-2xl sm:text-3xl text-white">{ingestionStats.totalLogsAnalyzed.toLocaleString()}</p>
               <LatencyGauge value={ingestionStats.avgLatencyMs} max={100} />
-              <div className="h-[220px]">
+              <div className="h-[180px] sm:h-[220px]">
                 <LogsLineChart data={ingestionData} />
               </div>
             </>
           </Section>
 
           <Section title="Risk Distribution" icon={AlertTriangle}>
-            <div className="h-[260px]">
+            <div className="h-[220px] sm:h-[260px]">
               {threatData?.donut ? (
                 <ThreatDonut data={threatData.donut} />
               ) : null}
@@ -298,14 +299,14 @@ function AdminDashboardContent() {
         </div>
 
         <Section title="API Categories" icon={Flame}>
-          <div className="h-[260px]">
+          <div className="h-[220px] sm:h-[260px]">
             {threatData?.categories ? (
               <APICategories data={threatData.categories} />
             ) : null}
           </div>
         </Section>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
           <Section title="Global Risk" icon={Globe}>
             {riskMatrixData ? (
               <Heatmap data={riskMatrixData} />
@@ -323,8 +324,8 @@ function AdminDashboardContent() {
               <ProfessionBar data={professionData} />
             ) : null}
 
-            <div className="overflow-x-auto rounded-2xl border border-slate-700/30">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto -mx-2 sm:mx-0 rounded-2xl border border-slate-700/30">
+              <table className="w-full text-sm min-w-[700px]">
                 <thead>
                   <tr className="border-b border-slate-700/40 bg-white/[0.02]">
                     {[

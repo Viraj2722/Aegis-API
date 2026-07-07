@@ -130,15 +130,24 @@ export default function HowItWorks() {
         </motion.div>
 
         <div className="relative">
+          {/* Desktop center line */}
           <div
-            className="absolute left-6 md:left-1/2 top-0 bottom-0 w-px hidden md:block"
+            className="absolute left-1/2 top-0 bottom-0 w-px hidden md:block"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(0,212,255,0.4), rgba(34,197,94,0.4), rgba(239,68,68,0.4), rgba(16,185,129,0.4))",
+            }}
+          />
+          {/* Mobile left line */}
+          <div
+            className="absolute left-4 top-0 bottom-0 w-px md:hidden"
             style={{
               background:
                 "linear-gradient(180deg, rgba(0,212,255,0.4), rgba(34,197,94,0.4), rgba(239,68,68,0.4), rgba(16,185,129,0.4))",
             }}
           />
 
-          <div className="space-y-12 md:space-y-0">
+          <div className="space-y-8 md:space-y-0">
             {steps.map((step, i) => {
               const isEven = i % 2 === 0;
               return (
@@ -151,13 +160,28 @@ export default function HowItWorks() {
                     delay: i * 0.15,
                     ease: [0.22, 1, 0.36, 1],
                   }}
-                  className={`relative flex items-center gap-8 md:gap-0 ${isEven ? "md:flex-row" : "md:flex-row-reverse"} mb-8 md:mb-12 last:mb-0`}
+                  className={`relative flex items-start md:items-center gap-6 md:gap-0 ${isEven ? "md:flex-row" : "md:flex-row-reverse"} mb-8 md:mb-12 last:mb-0 pl-14 md:pl-0`}
                 >
+                  {/* Mobile: left bullet indicator */}
+                  <div
+                    className="md:hidden absolute left-0 top-0 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border-2 z-10"
+                    style={{
+                      background: "#050810",
+                      borderColor: step.color,
+                      boxShadow: `0 0 12px ${step.color}50`,
+                    }}
+                  >
+                    <div
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ background: step.color }}
+                    />
+                  </div>
+
                   <div
                     className={`flex-1 w-full ${isEven ? "md:pr-16 md:text-right" : "md:pl-16 md:text-left"}`}
                   >
                     <motion.div
-                      className="glass rounded-2xl p-6 neon-border group cursor-default"
+                      className="glass rounded-2xl p-5 sm:p-6 neon-border group cursor-default"
                       whileHover={{ y: -4, transition: { duration: 0.2 } }}
                       style={{
                         borderColor: `${step.color}20`,
@@ -198,6 +222,7 @@ export default function HowItWorks() {
                     </motion.div>
                   </div>
 
+                  {/* Desktop center bullet */}
                   <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 z-10">
                     <motion.div
                       className="w-10 h-10 rounded-full flex items-center justify-center border-2"

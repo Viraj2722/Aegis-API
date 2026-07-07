@@ -31,7 +31,7 @@ export default function Navbar({ alerts = [], lastUpdated, displayName = "User",
   };
 
   return (
-    <nav className="glass border-b border-slate-800/60 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+    <nav className="glass border-b border-slate-800/60 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-3">
         <BrandLogo size="sm" href="/" />
         <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">

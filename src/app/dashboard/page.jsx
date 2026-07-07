@@ -874,12 +874,12 @@ function DashboardPageInner() {
             <StatCards stats={stats} />
           )}
 
-          <div className="flex items-center gap-1 p-1 glass rounded-xl border border-slate-800/60 w-fit">
+          <div className="flex items-center gap-1 p-1 glass rounded-xl border border-slate-800/60 w-full sm:w-fit overflow-x-auto scrollbar-thin">
             {["table", "graph", "attack"].map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${tab === t ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-white"}`}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all capitalize whitespace-nowrap ${tab === t ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-white"}`}
               >
                 {t === "table"
                   ? "API Table"
