@@ -51,7 +51,7 @@ export default function Hero() {
   };
 
   return (
-    <section className="relative min-h-screen overflow-hidden bg-black cyber-grid">
+    <section className="relative min-h-screen overflow-hidden bg-black cyber-grid w-full">
       <Vortex
         backgroundColor="#000000"
         className="relative min-h-screen w-full flex items-center justify-center"

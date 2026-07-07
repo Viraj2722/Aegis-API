@@ -8,8 +8,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className="overflow-x-hidden w-full">
+    <html lang="en" className="overflow-x-hidden">
+      <body className="overflow-x-hidden w-full max-w-[100vw]">
         <Providers>{children}</Providers>
       </body>
     </html>

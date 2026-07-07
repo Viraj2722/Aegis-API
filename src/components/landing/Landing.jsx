@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import Hero from "./Hero";
 import ProductVisual from "./ProductVisual";
 import Features from "./Features";
@@ -10,15 +9,10 @@ import FinalCTA from "./FinalCTA";
 import Footer from "./Footer";
 import Navbar from "./Navbar";
 
-export default function Landing() {
+export default function Landing({ splashDone = false }) {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.8, ease: "easeOut" }}
-      className="min-h-screen bg-[#050810]"
-    >
-      <Navbar />
+    <div className="min-h-screen bg-[#050810] overflow-x-hidden w-full">
+      <Navbar splashDone={splashDone} />
       <Hero />
       <ProductVisual />
       <Features />
@@ -26,6 +20,6 @@ export default function Landing() {
       <TrustSecurity />
       <FinalCTA />
       <Footer />
-    </motion.div>
+    </div>
   );
 }
